@@ -32,7 +32,7 @@ class GameEnginesTest {
         val run = listOf(KlondikeCard(6, 1), KlondikeCard(5, 0))
         val state = KlondikeState(
             stock = emptyList(), waste = emptyList(),
-            tableau = listOf(listOf(hidden) + run, listOf(KlondikeCard(7, 2))),
+            tableau = listOf(listOf(hidden) + run, listOf(KlondikeCard(7, 3))),
             foundations = List(4) { emptyList() }
         )
         val moved = KlondikeEngine.moveTableauRun(state, 0, 1, 1)
