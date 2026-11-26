@@ -7,7 +7,7 @@
 - **Partnership Spades** — a four-player game with you and Dewey on the blue team against Huey and Louie on the red team.
 - **Klondike Solitaire** — classic seven-column solitaire with Draw 1 / Draw 3 settings, scoring, and saved game state.
 
-The home screen uses a bright blue-and-green design. Game progress and settings are stored on the device; there are no accounts or cloud-sync features.
+The home screen uses a bright blue-and-green design. Sudoku and Crossword progress, plus the current Solitaire game and settings, are stored on the device. Spades match progress currently resets when you leave that screen. There are no accounts or cloud-sync features.
 
 ## Project status
 
