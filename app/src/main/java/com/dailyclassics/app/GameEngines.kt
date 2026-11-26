@@ -98,6 +98,36 @@ data class KlondikeState(
 }
 
 object KlondikeEngine {
+    fun serialize(state: KlondikeState): String {
+        fun pile(cards: List<KlondikeCard>) = cards.joinToString(",") { "${it.rank}.${it.suit}.${if (it.faceUp) 1 else 0}" }
+        return listOf(
+            pile(state.stock), pile(state.waste),
+            state.tableau.joinToString("/") { pile(it) },
+            state.foundations.joinToString("/") { pile(it) },
+            state.moves.toString(), state.score.toString(), state.drawCount.toString()
+        ).joinToString("~")
+    }
+
+    fun deserialize(raw: String?): KlondikeState? = try {
+        if (raw.isNullOrBlank()) return null
+        val parts = raw.split("~", limit = 7)
+        if (parts.size != 7) return null
+        fun pile(value: String): List<KlondikeCard> =
+            if (value.isEmpty()) emptyList() else value.split(",").map { token ->
+                val fields = token.split(".")
+                require(fields.size == 3)
+                KlondikeCard(fields[0].toInt(), fields[1].toInt(), fields[2] == "1")
+            }
+        val tableau = parts[2].split("/", limit = 7).map { pile(it) }
+        val foundations = parts[3].split("/", limit = 4).map { pile(it) }
+        if (tableau.size != 7 || foundations.size != 4) return null
+        val draw = parts[6].toInt()
+        if (draw != 1 && draw != 3) return null
+        KlondikeState(pile(parts[0]), pile(parts[1]), tableau, foundations, parts[4].toInt(), parts[5].toInt(), draw)
+    } catch (_: Exception) {
+        null
+    }
+
     fun newGame(seed: Int, drawCount: Int = 1): KlondikeState {
         require(drawCount == 1 || drawCount == 3)
         val deck = (0..3).flatMap { suit -> (1..13).map { rank -> KlondikeCard(rank, suit) } }.shuffled(Random(seed))
