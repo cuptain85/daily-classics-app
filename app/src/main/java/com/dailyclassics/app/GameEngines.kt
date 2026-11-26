@@ -108,24 +108,26 @@ object KlondikeEngine {
         ).joinToString("~")
     }
 
-    fun deserialize(raw: String?): KlondikeState? = try {
+    fun deserialize(raw: String?): KlondikeState? {
         if (raw.isNullOrBlank()) return null
-        val parts = raw.split("~", limit = 7)
-        if (parts.size != 7) return null
-        fun pile(value: String): List<KlondikeCard> =
-            if (value.isEmpty()) emptyList() else value.split(",").map { token ->
-                val fields = token.split(".")
-                require(fields.size == 3)
-                KlondikeCard(fields[0].toInt(), fields[1].toInt(), fields[2] == "1")
+        return try {
+            val parts = raw.split("~", limit = 7)
+            if (parts.size != 7) null else {
+                fun pile(value: String): List<KlondikeCard> =
+                    if (value.isEmpty()) emptyList() else value.split(",").map { token ->
+                        val fields = token.split(".")
+                        require(fields.size == 3)
+                        KlondikeCard(fields[0].toInt(), fields[1].toInt(), fields[2] == "1")
+                    }
+                val tableau = parts[2].split("/", limit = 7).map { pile(it) }
+                val foundations = parts[3].split("/", limit = 4).map { pile(it) }
+                val draw = parts[6].toInt()
+                if (tableau.size != 7 || foundations.size != 4 || (draw != 1 && draw != 3)) null
+                else KlondikeState(pile(parts[0]), pile(parts[1]), tableau, foundations, parts[4].toInt(), parts[5].toInt(), draw)
             }
-        val tableau = parts[2].split("/", limit = 7).map { pile(it) }
-        val foundations = parts[3].split("/", limit = 4).map { pile(it) }
-        if (tableau.size != 7 || foundations.size != 4) return null
-        val draw = parts[6].toInt()
-        if (draw != 1 && draw != 3) return null
-        KlondikeState(pile(parts[0]), pile(parts[1]), tableau, foundations, parts[4].toInt(), parts[5].toInt(), draw)
-    } catch (_: Exception) {
-        null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun newGame(seed: Int, drawCount: Int = 1): KlondikeState {
