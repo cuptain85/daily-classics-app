@@ -185,7 +185,7 @@ object KlondikeEngine {
         val from = state.tableau[source]
         if (sourceIndex !in from.indices || !from[sourceIndex].faceUp) return null
         val run = from.drop(sourceIndex)
-        if (run.zipWithNext().any { (a, b) -> a.rank != b.rank + 1 || a.isRed == b.isRed }) return null
+        if (run.any { !it.faceUp } || run.zipWithNext().any { (a, b) -> a.rank != b.rank + 1 || a.isRed == b.isRed }) return null
         if (!canTableau(run.first(), state.tableau[destination].lastOrNull())) return null
         val piles = state.tableau.map { it.toMutableList() }
         piles[destination].addAll(run)
@@ -271,7 +271,9 @@ object SpadesEngine {
         SpadesRules.trickWinner(plays.map { it.player to it.card }, ledSuit)
 
     fun scoreHand(bids: List<SpadesBid>, tricksByPlayer: List<Int>, priorBlueBags: Int, priorRedBags: Int): SpadesHandResult {
-        require(bids.size == 4 && tricksByPlayer.size == 4)
+        require(bids.size == 4 && bids.map { it.player }.toSet().size == 4)
+        require(tricksByPlayer.size == 4 && tricksByPlayer.all { it in 0..13 } && tricksByPlayer.sum() == 13)
+        require(priorBlueBags in 0..9 && priorRedBags in 0..9)
         val blueBids = bids.filter { it.player % 2 == 0 }
         val redBids = bids.filter { it.player % 2 == 1 }
         val blueBid = blueBids.sumOf { it.tricks }
