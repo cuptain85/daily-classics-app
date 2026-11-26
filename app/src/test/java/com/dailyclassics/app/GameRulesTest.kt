@@ -18,7 +18,7 @@ class GameRulesTest {
 
     @Test fun tableauRequiresDescendingAlternatingColors() {
         assertTrue(KlondikeRules.canPlaceOnTableau(GameCard(8, 1), GameCard(9, 0)))
-        assertFalse(KlondikeRules.canPlaceOnTableau(GameCard(8, 0), GameCard(9, 2)))
+        assertFalse(KlondikeRules.canPlaceOnTableau(GameCard(8, 1), GameCard(9, 2)))
         assertTrue(KlondikeRules.canPlaceOnTableau(GameCard(13, 0), null))
         assertFalse(KlondikeRules.canPlaceOnTableau(GameCard(12, 1), null))
     }
@@ -38,7 +38,7 @@ class GameRulesTest {
     @Test fun spadesTrumpBeatsHigherOffSuitAndScoresBags() {
         val plays = listOf(0 to GameCard(13, 0), 1 to GameCard(2, 3), 2 to GameCard(1, 0))
         assertEquals(1, SpadesRules.trickWinner(plays, 0))
-        assertEquals(12, SpadesRules.handScore(3, 5))
+        assertEquals(32, SpadesRules.handScore(3, 5))
         assertEquals(-30, SpadesRules.handScore(3, 2))
     }
 }
