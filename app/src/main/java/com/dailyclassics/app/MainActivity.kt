@@ -146,22 +146,53 @@ private fun GameHeader(title: String, onBack: () -> Unit, extra: String = "") {
 
 @Composable
 private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences) {
-    val daily = remember { DailySudokuGenerator.forDate(LocalDate.now().toString()) }
+    var date by remember { mutableStateOf(LocalDate.now()) }
+    val daily = remember(date) { DailySudokuGenerator.forDate(date.toString()) }
     val puzzle = daily.puzzle
     val solution = daily.solution
-    val cells = remember { mutableStateListOf<Char>().apply {
-        val saved = prefs.getString("sudoku_" + daily.dateKey, null)
-        (saved ?: puzzle).forEach { add(it) }
+    val cells = remember(date) { mutableStateListOf<Char>().apply {
+        (prefs.getString("sudoku_" + daily.dateKey, null) ?: puzzle).forEach { add(it) }
     } }
-    var selected by remember { mutableIntStateOf(0) }
+    val notes = remember(date) { mutableStateMapOf<Int, String>().apply {
+        prefs.getString("sudoku_notes_" + daily.dateKey, "").orEmpty().split(";").forEach { item ->
+            val parts = item.split("=")
+            if (parts.size == 2) parts[0].toIntOrNull()?.let { index -> if (index in 0..80) put(index, parts[1]) }
+        }
+    } }
+    val undo = remember(date) { mutableStateListOf<Pair<String, Map<Int, String>>>() }
+    val redo = remember(date) { mutableStateListOf<Pair<String, Map<Int, String>>>() }
+    var selected by remember(date) { mutableIntStateOf(0) }
     var notesMode by remember { mutableStateOf(false) }
-    var noteText by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("Fill each row, column and 3×3 box with 1–9.") }
-    val notes = remember { mutableStateMapOf<Int, String>() }
+    var message by remember(date) { mutableStateOf("Fill each row, column and 3×3 box with 1–9.") }
+
+    fun snapshot(): Pair<String, Map<Int, String>> = cells.joinToString("") to notes.toMap()
+    fun rememberChange() {
+        undo.add(snapshot())
+        if (undo.size > 100) undo.removeAt(0)
+        redo.clear()
+    }
+    fun persist() {
+        prefs.edit()
+            .putString("sudoku_" + daily.dateKey, cells.joinToString(""))
+            .putString("sudoku_notes_" + daily.dateKey, notes.entries.joinToString(";") { "${it.key}=${it.value}" })
+            .apply()
+    }
+    fun restore(snapshot: Pair<String, Map<Int, String>>) {
+        cells.indices.forEach { cells[it] = snapshot.first[it] }
+        notes.clear()
+        notes.putAll(snapshot.second)
+        persist()
+    }
+
     Column(Modifier.fillMaxSize().padding(14.dp)) {
-        GameHeader("Daily Sudoku", onBack, "Today's puzzle")
+        GameHeader("Daily Sudoku", onBack, "Puzzle for ${daily.dateKey}")
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            OutlinedButton(onClick = { date = date.minusDays(1) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) { Text("‹ Previous") }
+            Text(if (date == LocalDate.now()) "Today" else date.toString(), color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            OutlinedButton(onClick = { date = date.plusDays(1) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) { Text("Next ›") }
+        }
         Text(message, color = Ink, fontSize = 12.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Column(Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(2.dp)) {
             for (r in 0..8) {
                 Row(Modifier.weight(1f)) {
@@ -169,16 +200,20 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                         val i = r * 9 + c
                         val fixed = puzzle[i] != '0'
                         val chosen = selected == i
+                        val conflict = cells[i] != '0' && cells.indices.any { other ->
+                            other != i && cells[other] == cells[i] &&
+                                (other / 9 == i / 9 || other % 9 == i % 9 ||
+                                    (other / 27 == i / 27 && other % 9 / 3 == i % 9 / 3))
+                        }
                         Box(
-                            Modifier.weight(1f).fillMaxHeight()
-                                .padding(0.5.dp)
-                                .background(if (chosen) Color(0xFFB8D9FF) else Color.White)
+                            Modifier.weight(1f).fillMaxHeight().padding(0.5.dp)
+                                .background(when { chosen -> Color(0xFFB8D9FF); conflict -> Color(0xFFFFDADA); else -> Color.White })
                                 .clickable { selected = i },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 if (cells[i] != '0') cells[i].toString() else notes[i].orEmpty(),
-                                color = if (fixed) DeepBlue else Ink,
+                                color = if (fixed) DeepBlue else if (conflict) Color.Red else Ink,
                                 fontSize = if (notes[i] != null && cells[i] == '0') 8.sp else 18.sp,
                                 fontWeight = if (fixed) FontWeight.Bold else FontWeight.Normal
                             )
@@ -187,34 +222,63 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { notesMode = !notesMode }, colors = ButtonDefaults.buttonColors(containerColor = if (notesMode) Green else Blue), modifier = Modifier.weight(1f)) { Text(if (notesMode) "Notes ON" else "Notes OFF") }
-            OutlinedButton(onClick = { cells.indices.forEach { if (puzzle[it] == '0') { cells[it] = '0'; notes.remove(it) } }; prefs.edit().remove("sudoku").apply() }, modifier = Modifier.weight(1f)) { Text("Clear") }
-            OutlinedButton(onClick = { message = if (cells.joinToString("") == solution) "Excellent! Puzzle solved." else "Keep going — check your rows, columns and boxes." }, modifier = Modifier.weight(1f)) { Text("Check") }
-        }
         Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Button(onClick = { notesMode = !notesMode }, colors = ButtonDefaults.buttonColors(containerColor = if (notesMode) Green else Blue), modifier = Modifier.weight(1f)) { Text(if (notesMode) "Notes ON" else "Notes OFF") }
+            OutlinedButton(onClick = {
+                rememberChange()
+                cells.indices.forEach { if (puzzle[it] == '0') { cells[it] = '0'; notes.remove(it) } }
+                persist()
+                message = "Your entries and notes were cleared."
+            }, modifier = Modifier.weight(1f)) { Text("Clear") }
+            OutlinedButton(onClick = {
+                val board = cells.joinToString("")
+                message = when {
+                    !SudokuRules.isValid(board) -> "There are duplicate numbers in a row, column or box."
+                    SudokuRules.isSolved(board) && board == solution -> "Excellent! Puzzle solved."
+                    else -> "No conflicts found so far. Keep going!"
+                }
+            }, modifier = Modifier.weight(1f)) { Text("Check") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(onClick = {
+                if (undo.isNotEmpty()) {
+                    redo.add(snapshot())
+                    restore(undo.removeAt(undo.lastIndex))
+                    message = "Last change undone."
+                } else message = "Nothing to undo."
+            }, modifier = Modifier.weight(1f)) { Text("Undo") }
+            OutlinedButton(onClick = {
+                if (redo.isNotEmpty()) {
+                    undo.add(snapshot())
+                    restore(redo.removeAt(redo.lastIndex))
+                    message = "Change restored."
+                } else message = "Nothing to redo."
+            }, modifier = Modifier.weight(1f)) { Text("Redo") }
+        }
         for (row in 0..2) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (col in 1..3) {
                     val n = row * 3 + col
                     Button(onClick = {
                         if (puzzle[selected] == '0') {
+                            rememberChange()
                             if (notesMode) {
                                 val digit = ('0'.code + n).toChar()
                                 val current = notes[selected].orEmpty()
-                                notes[selected] = if (digit in current) current.filterNot { it == digit } else current + digit
+                                val updated = if (digit in current) current.filterNot { it == digit } else current + digit
+                                if (updated.isEmpty()) notes.remove(selected) else notes[selected] = updated
                             } else {
                                 cells[selected] = ('0'.code + n).toChar()
                                 notes.remove(selected)
-                                prefs.edit().putString("sudoku_" + daily.dateKey, cells.joinToString("")).apply()
                             }
+                            persist()
                         }
                     }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) { Text(n.toString(), fontSize = 19.sp) }
                 }
             }
         }
-        Text("Selected square: row ${selected / 9 + 1}, column ${selected % 9 + 1}", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+        Text("Selected square: row ${selected / 9 + 1}, column ${selected % 9 + 1}", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
