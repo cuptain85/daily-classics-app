@@ -17,6 +17,31 @@ class GameEnginesTest {
         }
     }
 
+    @Test fun generatedCrosswordsHaveRealIntersectingAcrossAndDownEntries() {
+        val puzzle = CrosswordPuzzleGenerator.forDate("2026-11-26")
+        assertEquals(169, puzzle.blankGrid.length)
+        assertEquals(169, puzzle.solutionGrid.length)
+        assertTrue(puzzle.entries.size >= 7)
+        assertTrue(puzzle.entries.any { it.across })
+        assertTrue(puzzle.entries.any { !it.across })
+        puzzle.entries.forEach { entry ->
+            assertEquals(entry.answer.length, entry.cells.size)
+            assertEquals(entry.answer, entry.cells.map { puzzle.solutionGrid[it] }.joinToString(""))
+        }
+        val across = puzzle.entries.filter { it.across }
+        val down = puzzle.entries.filter { !it.across }
+        val intersections = across.sumOf { a -> down.sumOf { d -> a.cells.count { it in d.cells } } }
+        assertTrue("Puzzle should contain genuine letter crossings", intersections >= 6)
+    }
+
+    @Test fun dailyCrosswordsAreStableByDateAndChangeAcrossDates() {
+        val todayA = CrosswordPuzzleGenerator.forDate("2026-11-26")
+        val todayB = CrosswordPuzzleGenerator.forDate("2026-11-26")
+        val tomorrow = CrosswordPuzzleGenerator.forDate("2026-11-27")
+        assertEquals(todayA, todayB)
+        assertNotEquals(todayA.solutionGrid, tomorrow.solutionGrid)
+    }
+
     @Test fun klondikeDealCyclesWasteBackToStock() {
         val initial = KlondikeEngine.newGame(seed = 7)
         val dealt = KlondikeEngine.deal(initial)
