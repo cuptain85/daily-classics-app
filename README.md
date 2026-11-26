@@ -29,7 +29,7 @@ Debug builds are for testing and are not signed as a public distribution release
 ## Build from source
 
 Requirements:
-- Android Studio with Android SDK 35
+- Android Studio with Android SDK 36
 - JDK 17
 - Gradle 8.11.1 (the GitHub Actions workflow installs this version)
 
