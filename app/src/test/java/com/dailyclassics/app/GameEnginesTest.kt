@@ -33,7 +33,7 @@ class GameEnginesTest {
         val state = KlondikeState(
             stock = emptyList(), waste = emptyList(),
             tableau = listOf(listOf(hidden) + run, listOf(KlondikeCard(7, 2))),
-            foundations = List(4) { emptyList() } + List(3) { emptyList() }
+            foundations = List(4) { emptyList() }
         )
         val moved = KlondikeEngine.moveTableauRun(state, 0, 1, 1)
         assertNotNull(moved)
@@ -49,12 +49,12 @@ class GameEnginesTest {
 
     @Test fun spadesBagPenaltyAppliesAtTen() {
         val bids = listOf(SpadesBid(0, 3), SpadesBid(1, 3), SpadesBid(2, 2), SpadesBid(3, 2))
-        val result = SpadesEngine.scoreHand(bids, listOf(4, 2, 3, 4), priorBlueBags = 7, priorRedBags = 8)
+        val result = SpadesEngine.scoreHand(bids, listOf(4, 2, 3, 4), priorBlueBags = 8, priorRedBags = 8)
         assertEquals(7, result.blueTricks)
         assertEquals(6, result.redTricks)
         assertEquals(0, result.blueBags)
-        assertEquals(0, result.redBags)
-        assertEquals(40, result.blueScore)
-        assertEquals(0, result.redScore)
+        assertEquals(9, result.redBags)
+        assertEquals(-48, result.blueScore)
+        assertEquals(51, result.redScore)
     }
 }
