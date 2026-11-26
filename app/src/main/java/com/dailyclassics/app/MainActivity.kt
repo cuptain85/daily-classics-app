@@ -285,6 +285,7 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
     var moves by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf("Tap stock to deal. Tap a column's top card to select it, then another column.") }
     var selectedCol by remember { mutableIntStateOf(-1) }
+    var selectedWaste by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Felt).padding(12.dp)) {
         GameHeader("Klondike Solitaire", onBack, "Score: ${foundations.sum() * 10}   Moves: $moves")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -293,16 +294,34 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
                 else { stock.addAll(waste.reversed()); waste.clear() }
                 moves++
             }) { Text(if (stock.isEmpty()) "↻" else "▧", Modifier.padding(18.dp), color = Color.White, fontSize = 22.sp) }
-            Text(waste.lastOrNull()?.label ?: "Waste", Modifier.background(Color.White, RoundedCornerShape(8.dp)).padding(16.dp), color = Ink)
+            Text(waste.lastOrNull()?.label ?: "Waste", Modifier.background(if (selectedWaste) Color(0xFFFFE39B) else Color.White, RoundedCornerShape(8.dp)).clickable { selectedWaste = waste.isNotEmpty(); selectedCol = -1 }.padding(16.dp), color = Ink)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                foundations.forEachIndexed { i, count -> Text(if (count == 0) listOf("♣","♦","♥","♠")[i] else "$count", Modifier.background(Color(0xFF0E4B37), RoundedCornerShape(8.dp)).padding(12.dp), color = Color.White) }
+                foundations.forEachIndexed { i, count ->
+                    Text(if (count == 0) listOf("♣","♦","♥","♠")[i] else "$count",
+                        Modifier.background(Color(0xFF0E4B37), RoundedCornerShape(8.dp)).clickable {
+                            val card = if (selectedWaste) waste.lastOrNull() else columns.getOrNull(selectedCol)?.lastOrNull()
+                            if (card != null && card.suit == i && card.rank == count + 1) {
+                                if (selectedWaste) waste.removeAt(waste.lastIndex) else {
+                                    val pile = columns[selectedCol]; pile.removeAt(pile.lastIndex)
+                                    if (pile.isNotEmpty() && !pile.last().faceUp) pile[pile.lastIndex] = pile.last().copy(faceUp = true)
+                                }
+                                foundations[i] = count + 1; moves++; message = "Foundation advanced."; selectedWaste = false; selectedCol = -1
+                            } else message = "Build foundations upward by suit, starting with an Ace."
+                        }.padding(12.dp), color = Color.White)
+                }
             }
         }
         Text(message, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             columns.forEachIndexed { index, pile ->
                 Column(Modifier.weight(1f).clickable {
-                    if (selectedCol == index) selectedCol = -1
+                    if (selectedWaste) {
+                        val card = waste.lastOrNull()
+                        val target = columns[index].lastOrNull()
+                        if (card != null && (target == null && card.rank == 13 || target != null && target.rank == card.rank + 1 && target.red != card.red)) {
+                            columns[index].add(waste.removeAt(waste.lastIndex)); moves++; message = "Moved waste card."; selectedWaste = false
+                        } else message = "That waste card cannot go there."
+                    } else if (selectedCol == index) selectedCol = -1
                     else if (selectedCol >= 0) {
                         val from = columns[selectedCol]
                         val to = columns[index]
@@ -314,7 +333,7 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
                             moves++; message = "Nice move."
                         } else message = "That card cannot go there."
                         selectedCol = -1
-                    } else selectedCol = index
+                    } else { selectedCol = index; selectedWaste = false }
                 }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF1C8058), RoundedCornerShape(5.dp)).padding(vertical = 12.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
                     pile.forEachIndexed { j, card ->
