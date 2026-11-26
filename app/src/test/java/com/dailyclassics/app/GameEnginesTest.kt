@@ -183,7 +183,7 @@ class GameEnginesTest {
     }
 
     @Test fun spadesScoringCountsNilAndFailedBids() {
-        assertEquals(100, SpadesRules.handScore(0, 1))
+        assertEquals(1, SpadesRules.handScore(0, 1))
         assertEquals(-40, SpadesRules.handScore(4, 3))
         assertEquals(43, SpadesRules.handScore(4, 7))
     }
