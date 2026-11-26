@@ -104,7 +104,6 @@ class GameEnginesTest {
         assertEquals(-48, result.blueScore)
         assertEquals(51, result.redScore)
     }
-}
 
     @Test fun klondikeNewDealContainsOneCompleteStandardDeck() {
         val state = KlondikeEngine.newGame(seed = 20261126, drawCount = 1)
@@ -147,3 +146,4 @@ class GameEnginesTest {
             else assertEquals('.', puzzle.blankGrid[index])
         }
     }
+}
