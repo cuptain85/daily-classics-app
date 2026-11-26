@@ -117,13 +117,22 @@ object KlondikeEngine {
                     if (value.isEmpty()) emptyList() else value.split(",").map { token ->
                         val fields = token.split(".")
                         require(fields.size == 3)
+                        require(fields[2] == "0" || fields[2] == "1")
                         KlondikeCard(fields[0].toInt(), fields[1].toInt(), fields[2] == "1")
                     }
                 val tableau = parts[2].split("/", limit = 7).map { pile(it) }
                 val foundations = parts[3].split("/", limit = 4).map { pile(it) }
                 val draw = parts[6].toInt()
-                if (tableau.size != 7 || foundations.size != 4 || (draw != 1 && draw != 3)) null
-                else KlondikeState(pile(parts[0]), pile(parts[1]), tableau, foundations, parts[4].toInt(), parts[5].toInt(), draw)
+                val moves = parts[4].toInt()
+                val score = parts[5].toInt()
+                if (tableau.size != 7 || foundations.size != 4 || (draw != 1 && draw != 3) ||
+                    moves < 0 || score < 0) null
+                else {
+                    val state = KlondikeState(pile(parts[0]), pile(parts[1]), tableau, foundations, moves, score, draw)
+                    val cards = state.stock + state.waste + state.tableau.flatten() + state.foundations.flatten()
+                    val uniqueCards = cards.map { it.rank to it.suit }.toSet()
+                    if (cards.size != 52 || uniqueCards.size != 52) null else state
+                }
             }
         } catch (_: Exception) {
             null
@@ -137,7 +146,7 @@ object KlondikeEngine {
         val piles = (0..6).map { column ->
             (0..column).map { row -> deck[cursor++].copy(faceUp = row == column) }
         }
-        return KlondikeState(deck.drop(cursor), emptyList(), piles, List(4) { emptyList() }, drawCount = drawCount)
+        return KlondikeState(deck.drop(cursor).map { it.copy(faceUp = false) }, emptyList(), piles, List(4) { emptyList() }, drawCount = drawCount)
     }
 
     fun deal(state: KlondikeState): KlondikeState {
