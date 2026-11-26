@@ -40,6 +40,19 @@ gradle :app:assembleDebug
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+## Advertising and ad-free upgrade plan
+
+The intended free-to-play experience is:
+
+- Small banner ads may appear on the home screen and within game screens.
+- A full-screen interstitial may appear during the transition after a player selects a game from the home screen and before that game's play screen begins.
+- A full-screen interstitial may appear at a natural game-completion break.
+- **No advertisements may interrupt active gameplay.**
+- Interstitial frequency must be capped, and ads must not appear if the player has purchased the ad-free upgrade.
+- The planned ad-free upgrade is a one-time, non-consumable Google Play purchase priced at **$0.99**, restoring across reinstalls through the player's Google Play account.
+
+Ad serving and billing are **not yet integrated**. Production integration requires the publisher's AdMob app/ad-unit IDs, Google Play Console product configuration, consent/privacy setup, and testing with Google test ads and Play Billing test purchases. The game-launch interstitial must be implemented only at a clearly defined transition and reviewed against current Google Play ad policies. Never use live ad inventory during development or testing.
+
 ## Privacy
 
 The current app does not request the Android Internet permission and has no account, advertising, analytics, or cloud-sync integration. Game progress and settings are stored locally using Android app preferences. Android device backup behavior may apply to app data according to the device's backup settings.
