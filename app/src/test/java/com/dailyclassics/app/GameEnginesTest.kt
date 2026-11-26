@@ -27,6 +27,16 @@ class GameEnginesTest {
         assertTrue(state.stock.isNotEmpty() || state.waste.isNotEmpty())
     }
 
+    @Test fun klondikeDrawThreeRecycleKeepsTopCardOrder() {
+        var state = KlondikeEngine.newGame(seed = 19, drawCount = 3)
+        repeat(8) { state = KlondikeEngine.deal(state) }
+        assertTrue(state.stock.isEmpty())
+        val previousTop = state.waste.last()
+        val recycled = KlondikeEngine.deal(state)
+        assertEquals(previousTop, recycled.waste.last())
+        assertEquals(21, recycled.stock.size)
+    }
+
     @Test fun klondikeMovesWholeValidRunAndFlipsExposedCard() {
         val hidden = KlondikeCard(7, 0, false)
         val run = listOf(KlondikeCard(6, 1), KlondikeCard(5, 0))
