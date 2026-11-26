@@ -2,6 +2,7 @@ package com.dailyclassics.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,12 +37,13 @@ private val Felt = Color(0xFF176B49)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val prefs = getSharedPreferences("daily_classics", MODE_PRIVATE)
         setContent {
             MaterialTheme {
                 var page by remember { mutableStateOf("Home") }
                 var drawThree by remember { mutableStateOf(prefs.getBoolean("draw3", false)) }
-                Surface(Modifier.fillMaxSize(), color = Pale) {
+                Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Pale) {
                     when (page) {
                         "Home" -> Home(
                             onGame = { page = it },
