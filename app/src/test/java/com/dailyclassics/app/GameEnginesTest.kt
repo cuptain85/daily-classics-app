@@ -38,8 +38,10 @@ class GameEnginesTest {
         assertTrue(state.stock.isEmpty())
         val previousTop = state.waste.last()
         val recycled = KlondikeEngine.deal(state)
-        assertEquals(previousTop, recycled.waste.last())
-        assertEquals(21, recycled.stock.size)
+        assertEquals(24, recycled.stock.size)
+        val dealtAgain = KlondikeEngine.deal(recycled)
+        assertEquals(previousTop, dealtAgain.waste.last())
+        assertEquals(21, dealtAgain.stock.size)
     }
 
     @Test fun klondikeMovesWholeValidRunAndFlipsExposedCard() {
