@@ -284,8 +284,8 @@ object SpadesEngine {
         // still judged against the partnership's combined tricks.
         val blueContractBid = blueBids.filter { it.tricks > 0 }.sumOf { it.tricks }
         val redContractBid = redBids.filter { it.tricks > 0 }.sumOf { it.tricks }
-        val blueNilScore = blueBids.filter { it.tricks == 0 }.sumOf { if (tricksByPlayer[it.player] == 0) 100 else -100 }
-        val redNilScore = redBids.filter { it.tricks == 0 }.sumOf { if (tricksByPlayer[it.player] == 0) 100 else -100 }
+        val blueNilScore = blueBids.filter { it.tricks == 0 }.fold(0) { total, bid -> total + (if (tricksByPlayer[bid.player] == 0) 100 else -100) }
+        val redNilScore = redBids.filter { it.tricks == 0 }.fold(0) { total, bid -> total + (if (tricksByPlayer[bid.player] == 0) 100 else -100) }
         val blueRaw = SpadesRules.handScore(blueContractBid, blueTricks) + blueNilScore
         val redRaw = SpadesRules.handScore(redContractBid, redTricks) + redNilScore
         val blueBagTotal = priorBlueBags + if (blueTricks >= blueContractBid) blueTricks - blueContractBid else 0
