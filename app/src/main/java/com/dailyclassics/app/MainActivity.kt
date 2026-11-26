@@ -268,7 +268,7 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
 
 private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean = true) {
     val symbol get() = listOf("♣", "♦", "♥", "♠")[suit]
-    val label get() = listOf("","A","2","3","4","5","6","7","8","9","10","J","Q","K")[rank] + symbol
+    val label get() = (when (rank) { 14 -> "A"; 13 -> "K"; 12 -> "Q"; 11 -> "J"; else -> rank.toString() }) + symbol
     val red get() = suit == 1 || suit == 2
 }
 
