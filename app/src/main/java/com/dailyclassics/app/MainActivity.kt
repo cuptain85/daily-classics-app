@@ -323,7 +323,7 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
     val cells = remember(date) {
         mutableStateListOf<Char>().apply {
             val saved = prefs.getString(savedKey, null)
-            (saved?.takeIf { it.length == 169 } ?: String(solutionGrid)).forEach { add(it) }
+            (saved?.takeIf { it.length == 169 } ?: String(CharArray(169) { if (blocked[it]) '#' else '.' })).forEach { add(it) }
         }
     }
     var activeIndex by remember(date) { mutableIntStateOf(0) }
