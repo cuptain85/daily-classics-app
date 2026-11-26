@@ -203,4 +203,27 @@ class GameEnginesTest {
         assertEquals(1, result.blueBags)
     }
 
+    @Test fun klondikeCannotMoveRunsContainingFaceDownCards() {
+        val state = KlondikeState(
+            stock = emptyList(), waste = emptyList(),
+            tableau = listOf(
+                listOf(KlondikeCard(6, 1, true), KlondikeCard(5, 0, false)),
+                listOf(KlondikeCard(7, 0))
+            ),
+            foundations = List(4) { emptyList() }
+        )
+        assertNull(KlondikeEngine.moveTableauRun(state, 0, 0, 1))
+    }
+
+    @Test fun spadesRejectsInvalidPartnershipScoreInputs() {
+        val duplicateBids = listOf(SpadesBid(0, 2), SpadesBid(0, 2), SpadesBid(2, 3), SpadesBid(3, 3))
+        assertThrows(IllegalArgumentException::class.java) {
+            SpadesEngine.scoreHand(duplicateBids, listOf(3, 3, 3, 4), 0, 0)
+        }
+        val invalidTricks = listOf(SpadesBid(0, 2), SpadesBid(1, 2), SpadesBid(2, 3), SpadesBid(3, 3))
+        assertThrows(IllegalArgumentException::class.java) {
+            SpadesEngine.scoreHand(invalidTricks, listOf(3, 3, 3, 3), 0, 0)
+        }
+    }
+
 }
