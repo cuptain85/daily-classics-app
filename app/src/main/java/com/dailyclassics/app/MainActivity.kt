@@ -276,78 +276,134 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 
 @Composable
 private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
-    val deck = remember { mutableStateListOf<PlayingCard>().apply { addAll((0..3).flatMap { s -> (1..13).map { r -> PlayingCard(r,s) } }.shuffled()) } }
-    val stock = remember { mutableStateListOf<PlayingCard>().apply { addAll(deck.drop(28)) } }
-    val waste = remember { mutableStateListOf<PlayingCard>() }
-    val columns = remember { mutableStateListOf<MutableList<PlayingCard>>().apply {
-        var k = 0
-        for (i in 1..7) { add(deck.subList(k, k+i).mapIndexed { idx, card -> card.copy(faceUp = idx == i-1) }.toMutableList()); k += i }
-    } }
-    val foundations = remember { mutableStateListOf<Int>().apply { repeat(4) { add(0) } } }
-    var moves by remember { mutableIntStateOf(0) }
-    var message by remember { mutableStateOf("Tap stock to deal. Tap a column's top card to select it, then another column.") }
-    var selectedCol by remember { mutableIntStateOf(-1) }
+    var game by remember { mutableStateOf(KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)) }
+    val history = remember { mutableStateListOf<KlondikeState>() }
     var selectedWaste by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().background(Felt).padding(12.dp)) {
-        GameHeader("Klondike Solitaire", onBack, "Score: ${foundations.sum() * 10}   Moves: $moves")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF0E4B37)), modifier = Modifier.clickable {
-                if (stock.isNotEmpty()) repeat(if (drawThree) 3 else 1) { if (stock.isNotEmpty()) waste.add(stock.removeAt(stock.lastIndex)) }
-                else { stock.addAll(waste.reversed()); waste.clear() }
-                moves++
-            }) { Text(if (stock.isEmpty()) "↻" else "▧", Modifier.padding(18.dp), color = Color.White, fontSize = 22.sp) }
-            Text(waste.lastOrNull()?.label ?: "Waste", Modifier.background(if (selectedWaste) Color(0xFFFFE39B) else Color.White, RoundedCornerShape(8.dp)).clickable { selectedWaste = waste.isNotEmpty(); selectedCol = -1 }.padding(16.dp), color = Ink)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                foundations.forEachIndexed { i, count ->
-                    Text(if (count == 0) listOf("♣","♦","♥","♠")[i] else "$count",
-                        Modifier.background(Color(0xFF0E4B37), RoundedCornerShape(8.dp)).clickable {
-                            val card = if (selectedWaste) waste.lastOrNull() else columns.getOrNull(selectedCol)?.lastOrNull()
-                            if (card != null && card.suit == i && card.rank == count + 1) {
-                                if (selectedWaste) waste.removeAt(waste.lastIndex) else {
-                                    val pile = columns[selectedCol]; pile.removeAt(pile.lastIndex)
-                                    if (pile.isNotEmpty() && !pile.last().faceUp) pile[pile.lastIndex] = pile.last().copy(faceUp = true)
-                                }
-                                foundations[i] = count + 1; moves++; message = "Foundation advanced."; selectedWaste = false; selectedCol = -1
-                            } else message = "Build foundations upward by suit, starting with an Ace."
-                        }.padding(12.dp), color = Color.White)
+    var selectedTableau by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var selectedFoundation by remember { mutableIntStateOf(-1) }
+    var message by remember { mutableStateOf("Tap the stock to deal. Select a card, then its destination.") }
+
+    fun commit(next: KlondikeState?) {
+        if (next == null) {
+            message = "That move is not allowed."
+        } else {
+            history.add(game)
+            game = next
+            selectedWaste = false
+            selectedTableau = null
+            selectedFoundation = -1
+            message = if (next.isWon) "You won! All four foundations are complete." else "Good move."
+        }
+    }
+
+    Column(Modifier.fillMaxSize().background(Felt).padding(10.dp)) {
+        GameHeader("Klondike Solitaire", onBack, "Score: ${game.score}   Moves: ${game.moves}")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("STOCK", color = Color.White, fontSize = 9.sp)
+                Text(if (game.stock.isEmpty()) "↻" else "▧", Modifier.background(Color(0xFF0E4B37), RoundedCornerShape(7.dp)).clickable {
+                    history.add(game); game = KlondikeEngine.deal(game)
+                    selectedWaste = false; selectedTableau = null; selectedFoundation = -1
+                    message = if (game.stock.isEmpty() && game.waste.isEmpty()) "No cards left to deal." else "Cards dealt."
+                }.padding(horizontal = 18.dp, vertical = 14.dp), color = Color.White, fontSize = 22.sp)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("WASTE", color = Color.White, fontSize = 9.sp)
+                Text(game.waste.lastOrNull()?.label ?: "—", Modifier.background(if (selectedWaste) Color(0xFFFFE39B) else Color.White, RoundedCornerShape(7.dp)).clickable {
+                    if (game.waste.isNotEmpty()) {
+                        selectedWaste = true; selectedTableau = null; selectedFoundation = -1
+                        message = "Waste card selected. Tap a tableau column or foundation."
+                    }
+                }.padding(horizontal = 14.dp, vertical = 14.dp), color = game.waste.lastOrNull()?.let { if (it.isRed) Color.Red else Ink } ?: Ink, fontWeight = FontWeight.Bold)
+            }
+            game.foundations.forEachIndexed { suit, pile ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("FOUND.", color = Color.White, fontSize = 8.sp)
+                    val top = pile.lastOrNull()
+                    Text(top?.label ?: listOf("♣", "♦", "♥", "♠")[suit],
+                        Modifier.background(if (selectedFoundation == suit) Color(0xFFFFE39B) else Color(0xFF0E4B37), RoundedCornerShape(7.dp)).clickable {
+                            if (selectedWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
+                            else if (selectedTableau != null && selectedTableau!!.second == game.tableau[selectedTableau!!.first].lastIndex) {
+                                commit(KlondikeEngine.moveTableauToFoundation(game, selectedTableau!!.first))
+                            } else if (selectedTableau == null) {
+                                selectedFoundation = suit; selectedWaste = false
+                                message = "Foundation selected. Tap a tableau column to move its top card back."
+                            } else message = "Only a tableau top card can move to a foundation."
+                        }.padding(horizontal = 9.dp, vertical = 14.dp),
+                        color = if (top?.isRed == true) Color(0xFFFFB4B4) else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
             }
         }
-        Text(message, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            columns.forEachIndexed { index, pile ->
-                Column(Modifier.weight(1f).clickable {
-                    if (selectedWaste) {
-                        val card = waste.lastOrNull()
-                        val target = columns[index].lastOrNull()
-                        if (card != null && (target == null && card.rank == 13 || target != null && target.rank == card.rank + 1 && target.red != card.red)) {
-                            columns[index].add(waste.removeAt(waste.lastIndex)); moves++; message = "Moved waste card."; selectedWaste = false
-                        } else message = "That waste card cannot go there."
-                    } else if (selectedCol == index) selectedCol = -1
-                    else if (selectedCol >= 0) {
-                        val from = columns[selectedCol]
-                        val to = columns[index]
-                        val card = from.lastOrNull()
-                        val target = to.lastOrNull()
-                        if (card != null && card.faceUp && (target == null && card.rank == 13 || target != null && target.rank == card.rank + 1 && target.red != card.red)) {
-                            to.add(card); from.removeAt(from.lastIndex)
-                            if (from.isNotEmpty() && !from.last().faceUp) from[from.lastIndex] = from.last().copy(faceUp = true)
-                            moves++; message = "Nice move."
-                        } else message = "That card cannot go there."
-                        selectedCol = -1
-                    } else { selectedCol = index; selectedWaste = false }
-                }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF1C8058), RoundedCornerShape(5.dp)).padding(vertical = 12.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
-                    pile.forEachIndexed { j, card ->
-                        Text(if (card.faceUp) card.label else "▧", Modifier.fillMaxWidth().background(if (selectedCol == index && j == pile.lastIndex) Color(0xFFFFE39B) else Color.White, RoundedCornerShape(5.dp)).padding(vertical = 8.dp), color = if (card.red) Color.Red else Ink, textAlign = TextAlign.Center, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(message, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 9.dp))
+        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            game.tableau.forEachIndexed { column, pile ->
+                Column(Modifier.weight(1f).fillMaxHeight().background(Color(0xFF1B7652), RoundedCornerShape(5.dp)).clickable {
+                    if (selectedFoundation >= 0) {
+                        commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
+                    } else if (selectedWaste) {
+                        commit(KlondikeEngine.moveWasteToTableau(game, column))
+                    } else if (selectedTableau != null) {
+                        val source = selectedTableau!!
+                        if (source.first == column) {
+                            selectedTableau = null
+                            message = "Selection cleared."
+                        } else commit(KlondikeEngine.moveTableauRun(game, source.first, source.second, column))
+                    } else {
+                        val top = pile.lastIndex
+                        if (top >= 0 && pile[top].faceUp) {
+                            selectedTableau = column to top
+                            message = "Selected ${pile[top].label}. Tap another column or its foundation."
+                        }
+                    }
+                }.padding(2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF0E4B37), RoundedCornerShape(4.dp)).padding(vertical = 10.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
+                    pile.forEachIndexed { index, card ->
+                        Text(if (card.faceUp) card.label else "▧",
+                            Modifier.fillMaxWidth().background(
+                                if (selectedTableau == column to index) Color(0xFFFFE39B) else Color.White,
+                                RoundedCornerShape(4.dp)
+                            ).clickable {
+                                if (card.faceUp) {
+                                    if (selectedFoundation >= 0) commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
+                                    else if (selectedWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
+                                    else if (selectedTableau != null && selectedTableau!!.first != column) {
+                                        val source = selectedTableau!!
+                                        commit(KlondikeEngine.moveTableauRun(game, source.first, source.second, column))
+                                    } else {
+                                        selectedTableau = column to index
+                                        selectedWaste = false
+                                        message = "Selected run beginning with ${card.label}."
+                                    }
+                                }
+                            }.padding(vertical = 8.dp),
+                            color = if (!card.faceUp) Color.White else if (card.isRed) Color.Red else Ink,
+                            textAlign = TextAlign.Center, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { selectedCol = -1; message = "Select a column, then its destination." }, modifier = Modifier.weight(1f)) { Text("Undo / Reset") }
-            Button(onClick = { message = "Move valid descending alternating-color sequences to build foundations A–K." }, modifier = Modifier.weight(1f)) { Text("Hint") }
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = {
+                if (history.isNotEmpty()) {
+                    game = history.removeAt(history.lastIndex)
+                    selectedWaste = false; selectedTableau = null; selectedFoundation = -1
+                    message = "Last move undone."
+                } else message = "No moves to undo yet."
+            }, modifier = Modifier.weight(1f)) { Text("Undo") }
+            OutlinedButton(onClick = {
+                val top = game.waste.lastOrNull()
+                val move = when {
+                    top != null && KlondikeEngine.moveWasteToFoundation(game) != null -> "Move ${top.label} to its foundation."
+                    else -> game.tableau.indexOfFirst { pile -> pile.lastOrNull()?.let { it.faceUp && KlondikeEngine.moveTableauToFoundation(game, game.tableau.indexOf(pile)) != null } == true }.takeIf { it >= 0 }?.let { "Move the top card of column ${it + 1} to its foundation." }
+                }
+                message = move ?: "Try uncovering face-down cards and moving Kings to empty columns."
+            }, modifier = Modifier.weight(1f)) { Text("Hint") }
+            Button(onClick = {
+                history.clear()
+                game = KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)
+                selectedWaste = false; selectedTableau = null; selectedFoundation = -1
+                message = "New game dealt."
+            }, modifier = Modifier.weight(1f)) { Text("New deal") }
         }
     }
 }
