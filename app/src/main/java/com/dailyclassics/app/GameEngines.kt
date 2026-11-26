@@ -272,14 +272,22 @@ object SpadesEngine {
 
     fun scoreHand(bids: List<SpadesBid>, tricksByPlayer: List<Int>, priorBlueBags: Int, priorRedBags: Int): SpadesHandResult {
         require(bids.size == 4 && tricksByPlayer.size == 4)
-        val blueBid = bids.filter { it.player % 2 == 0 }.sumOf { it.tricks }
-        val redBid = bids.filter { it.player % 2 == 1 }.sumOf { it.tricks }
+        val blueBids = bids.filter { it.player % 2 == 0 }
+        val redBids = bids.filter { it.player % 2 == 1 }
+        val blueBid = blueBids.sumOf { it.tricks }
+        val redBid = redBids.sumOf { it.tricks }
         val blueTricks = tricksByPlayer[0] + tricksByPlayer[2]
         val redTricks = tricksByPlayer[1] + tricksByPlayer[3]
-        val blueRaw = SpadesRules.handScore(blueBid, blueTricks)
-        val redRaw = SpadesRules.handScore(redBid, redTricks)
-        val blueBagTotal = priorBlueBags + if (blueTricks >= blueBid) blueTricks - blueBid else 0
-        val redBagTotal = priorRedBags + if (redTricks >= redBid) redTricks - redBid else 0
+        // Nil contracts score independently; the partner's non-nil contract is
+        // still judged against the partnership's combined tricks.
+        val blueContractBid = blueBids.filter { it.tricks > 0 }.sumOf { it.tricks }
+        val redContractBid = redBids.filter { it.tricks > 0 }.sumOf { it.tricks }
+        val blueNilScore = blueBids.filter { it.tricks == 0 }.sumOf { if (tricksByPlayer[it.player] == 0) 100 else -100 }
+        val redNilScore = redBids.filter { it.tricks == 0 }.sumOf { if (tricksByPlayer[it.player] == 0) 100 else -100 }
+        val blueRaw = SpadesRules.handScore(blueContractBid, blueTricks) + blueNilScore
+        val redRaw = SpadesRules.handScore(redContractBid, redTricks) + redNilScore
+        val blueBagTotal = priorBlueBags + if (blueTricks >= blueContractBid) blueTricks - blueContractBid else 0
+        val redBagTotal = priorRedBags + if (redTricks >= redContractBid) redTricks - redContractBid else 0
         val bluePenalty = (blueBagTotal / 10 - priorBlueBags / 10) * 100
         val redPenalty = (redBagTotal / 10 - priorRedBags / 10) * 100
         return SpadesHandResult(blueTricks, redTricks, blueBid, redBid,
