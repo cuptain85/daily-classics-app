@@ -31,7 +31,7 @@ object SudokuRules {
 }
 
 data class GameCard(val rank: Int, val suit: Int) {
-    init { require(rank in 1..13); require(suit in 0..3) }
+    init { require(rank in 1..14); require(suit in 0..3) }
     val isRed: Boolean get() = suit == 1 || suit == 2
 }
 
