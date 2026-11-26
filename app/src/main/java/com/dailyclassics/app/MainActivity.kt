@@ -665,9 +665,9 @@ private fun SpadesScreen(onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             ScoreBox("SCORE", blueScore, blueBags, redScore, redBags)
             Column(horizontalAlignment = Alignment.End) {
-                Text("Huey  •  Red  •  Bid ${bids.firstOrNull { it.player == 1 }?.tricks ?: "—"}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Text("Dewey  •  Blue  •  Bid ${bids.firstOrNull { it.player == 2 }?.tricks ?: "—"}", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Text("Louie  •  Red  •  Bid ${bids.firstOrNull { it.player == 3 }?.tricks ?: "—"}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("Huey  •  Red  •  Bid ${bids.firstOrNull { it.player == 1 }?.tricks?.let { if (it == 0) "Nil" else it.toString() } ?: "—"}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("Dewey  •  Blue  •  Bid ${bids.firstOrNull { it.player == 2 }?.tricks?.let { if (it == 0) "Nil" else it.toString() } ?: "—"}", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("Louie  •  Red  •  Bid ${bids.firstOrNull { it.player == 3 }?.tricks?.let { if (it == 0) "Nil" else it.toString() } ?: "—"}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -682,7 +682,7 @@ private fun SpadesScreen(onBack: () -> Unit) {
                     Text("Choose how many tricks you expect your partnership to take.", color = Color.Gray, fontSize = 11.sp)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         (0..13).forEach { bid ->
-                            Text(bid.toString(), Modifier.background(if (selectedBid == bid) Blue else Pale, RoundedCornerShape(8.dp)).clickable { selectedBid = bid }.padding(horizontal = 11.dp, vertical = 10.dp), color = if (selectedBid == bid) Color.White else Ink, fontWeight = FontWeight.Bold)
+                            Text(if (bid == 0) "Nil" else bid.toString(), Modifier.background(if (selectedBid == bid) Blue else Pale, RoundedCornerShape(8.dp)).clickable { selectedBid = bid }.padding(horizontal = 11.dp, vertical = 10.dp), color = if (selectedBid == bid) Color.White else Ink, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
