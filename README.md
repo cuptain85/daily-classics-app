@@ -66,7 +66,7 @@ The crossword clue/answer data is derived from [Open Crossword Bank](https://git
 ## Compatibility
 
 - Android minimum: API 26 (Android 8.0)
-- Target SDK: API 35
+- Target SDK: API 36
 - Application ID: `com.dailyclassics.app`
 - Current version: `0.1.0`
 
