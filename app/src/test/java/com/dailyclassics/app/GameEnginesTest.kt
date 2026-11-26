@@ -145,5 +145,47 @@ class GameEnginesTest {
             if (cell == '#') assertEquals('#', puzzle.blankGrid[index])
             else assertEquals('.', puzzle.blankGrid[index])
         }
+    }    
+    @Test fun klondikeStockStartsFaceDownAndEveryCardIsPreserved() {
+        val state = KlondikeEngine.newGame(seed = 20261126)
+        assertTrue(state.stock.all { !it.faceUp })
+        val cards = state.stock + state.waste + state.tableau.flatten() + state.foundations.flatten()
+        assertEquals(52, cards.size)
+        assertEquals(52, cards.map { it.rank to it.suit }.toSet().size)
     }
+
+    @Test fun klondikeRejectsIncompleteOrDuplicatedSavedDecks() {
+        val state = KlondikeEngine.newGame(seed = 81)
+        val missing = state.copy(stock = state.stock.drop(1))
+        assertNull(KlondikeEngine.deserialize(KlondikeEngine.serialize(missing)))
+        val duplicate = state.copy(stock = state.stock.drop(1) + state.tableau.first().first())
+        assertNull(KlondikeEngine.deserialize(KlondikeEngine.serialize(duplicate)))
+        assertNull(KlondikeEngine.deserialize(KlondikeEngine.serialize(state.copy(moves = -1))))
+    }
+
+    @Test fun klondikeRejectsInvalidFaceUpEncoding() {
+        val raw = KlondikeEngine.serialize(KlondikeEngine.newGame(seed = 17))
+        val malformed = raw.replaceFirst(Regex("\\.([01])(?=,|~)"), ".2")
+        assertNull(KlondikeEngine.deserialize(malformed))
+    }
+
+    @Test fun spadesTrickWinnerUsesTrumpThenHighestLedSuit() {
+        val ledSuit = 0
+        val plays = listOf(
+            SpadesPlay(0, GameCard(14, 0)),
+            SpadesPlay(1, GameCard(2, 3)),
+            SpadesPlay(2, GameCard(13, 0)),
+            SpadesPlay(3, GameCard(14, 1))
+        )
+        assertEquals(1, SpadesEngine.winner(plays, ledSuit))
+        val noTrump = plays.filterNot { it.player == 1 }
+        assertEquals(0, SpadesEngine.winner(noTrump, ledSuit))
+    }
+
+    @Test fun spadesScoringCountsNilAndFailedBids() {
+        assertEquals(100, SpadesRules.handScore(0, 1))
+        assertEquals(-40, SpadesRules.handScore(4, 3))
+        assertEquals(43, SpadesRules.handScore(4, 7))
+    }
+
 }
