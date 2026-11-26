@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -402,80 +404,183 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
                 history.clear()
                 game = KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)
                 selectedWaste = false; selectedTableau = null; selectedFoundation = -1
-                message = "New game dealt."
-            }, modifier = Modifier.weight(1f)) { Text("New deal") }
+                message @Composable
+private fun SpadesScreen(onBack: () -> Unit) {
+    val names = listOf("You", "Huey", "Dewey", "Louie")
+    var handNumber by remember { mutableIntStateOf(1) }
+    var hands = remember {
+        mutableStateListOf<List<GameCard>>().apply {
+            val deck = (0..3).flatMap { suit -> (2..14).map { rank -> GameCard(rank, suit) } }.shuffled()
+            repeat(4) { player -> add(deck.drop(player * 13).sortedWith(compareBy<GameCard> { it.suit }.thenBy { it.rank })) }
         }
     }
-}
-
-@Composable
-private fun SpadesScreen(onBack: () -> Unit) {
-    val suits = listOf("♣", "♦", "♥", "♠")
-    val names = listOf("You", "Huey", "Dewey", "Louie")
-    val hands = remember { mutableStateListOf<MutableList<PlayingCard>>().apply {
-        val cards = (0..3).flatMap { s -> (2..14).map { r -> PlayingCard(r,s) } }.shuffled()
-        repeat(4) { add(cards.drop(it*13).toMutableList().sortedWith(compareBy<PlayingCard> { it.suit }.thenBy { it.rank }).toMutableList()) }
-    } }
-    val trick = remember { mutableStateListOf<Pair<Int, PlayingCard>>() }
-    var turn by remember { mutableIntStateOf(0) }
-    var leadSuit by remember { mutableIntStateOf(-1) }
+    val bids = remember { mutableStateListOf<SpadesBid>() }
+    val plays = remember { mutableStateListOf<SpadesPlay>() }
+    val tricks = remember { mutableStateListOf<Int>().apply { repeat(4) { add(0) } } }
+    var phase by remember { mutableStateOf("bid") }
+    var selectedBid by remember { mutableIntStateOf(3) }
+    var currentPlayer by remember { mutableIntStateOf(0) }
+    var ledSuit by remember { mutableIntStateOf(-1) }
+    var spadesBroken by remember { mutableStateOf(false) }
     var blueScore by remember { mutableIntStateOf(0) }
     var redScore by remember { mutableIntStateOf(0) }
     var blueBags by remember { mutableIntStateOf(0) }
     var redBags by remember { mutableIntStateOf(0) }
-    var message by remember { mutableStateOf("You and Dewey are blue. Huey and Louie are red. Play a card.") }
-    fun playCard(player: Int, card: PlayingCard) {
-        if (player == 0 && turn == 0) {
-            hands[0].remove(card)
-            trick.add(player to card)
-            if (leadSuit < 0) leadSuit = card.suit
-            turn = 1
+    var message by remember { mutableStateOf("Place your bid. You and Dewey are the blue partnership.") }
+
+    fun startNextHand() {
+        handNumber++
+        val deck = (0..3).flatMap { suit -> (2..14).map { rank -> GameCard(rank, suit) } }.shuffled()
+        hands.clear()
+        repeat(4) { player -> hands.add(deck.drop(player * 13).sortedWith(compareBy<GameCard> { it.suit }.thenBy { it.rank })) }
+        bids.clear()
+        plays.clear()
+        repeat(4) { tricks[it] = 0 }
+        currentPlayer = 0
+        ledSuit = -1
+        spadesBroken = false
+        phase = "bid"
+        message = "Hand $handNumber. Place your bid."
+    }
+
+    fun placeBids() {
+        bids.clear()
+        bids.add(SpadesBid(0, selectedBid))
+        for (player in 1..3) bids.add(SpadesBid(player, SpadesEngine.chooseBotBid(hands[player])))
+        phase = "play"
+        currentPlayer = 0
+        message = "Bids are in. You lead the first trick."
+    }
+
+    fun playOne(player: Int, card: GameCard) {
+        if (ledSuit < 0) ledSuit = card.suit
+        if (card.suit == 3) spadesBroken = true
+        hands[player] = hands[player].filterNot { it == card }
+        plays.add(SpadesPlay(player, card))
+        if (plays.size == 4) {
+            val winner = SpadesEngine.winner(plays.toList(), ledSuit)
+            tricks[winner] = tricks[winner] + 1
+            message = "${names[winner]} wins the trick."
+            currentPlayer = winner
+            plays.clear()
+            ledSuit = -1
+            if (hands.all { it.isEmpty() }) {
+                val result = SpadesEngine.scoreHand(bids.toList(), tricks.toList(), blueBags, redBags)
+                blueScore += result.blueScore
+                redScore += result.redScore
+                blueBags = result.blueBags
+                redBags = result.redBags
+                phase = "roundComplete"
+                message = "Hand complete — Blue: ${result.blueTricks} tricks, bid ${result.blueBid}, score ${result.blueScore}. Red: ${result.redTricks} tricks, bid ${result.redBid}, score ${result.redScore}."
+                if (blueScore >= 500 || redScore >= 500) {
+                    message += if (blueScore > redScore) " Blue wins the match!" else " Red wins the match!"
+                    phase = "matchComplete"
+                }
+            }
+        } else {
+            currentPlayer = (player + 1) % 4
         }
     }
+
+    fun playUserCard(card: GameCard) {
+        if (phase != "play" || currentPlayer != 0) return
+        val legal = SpadesEngine.legalCards(hands[0], ledSuit.takeIf { it >= 0 }, spadesBroken)
+        if (card !in legal) {
+            message = if (ledSuit >= 0) "You must follow suit when you can." else "Spades cannot be led until broken, unless you hold only spades."
+            return
+        }
+        playOne(0, card)
+        while (phase == "play" && currentPlayer != 0) {
+            val player = currentPlayer
+            val options = SpadesEngine.legalCards(hands[player], ledSuit.takeIf { it >= 0 }, spadesBroken)
+            val chosen = if (plays.size == 0) {
+                options.filter { it.suit != 3 }.minByOrNull { it.rank } ?: options.minByOrNull { it.rank }
+            } else {
+                options.minByOrNull { it.rank }
+            } ?: break
+            playOne(player, chosen)
+        }
+        if (phase == "play" && currentPlayer == 0) message = "Your turn. Follow suit if possible."
+    }
+
+    fun cardLabel(card: GameCard): String =
+        (when (card.rank) { 14 -> "A"; 13 -> "K"; 12 -> "Q"; 11 -> "J"; else -> card.rank.toString() }) +
+            listOf("♣", "♦", "♥", "♠")[card.suit]
+
     Column(Modifier.fillMaxSize().background(Color(0xFFE9F2FC)).padding(12.dp)) {
-        GameHeader("Partnership Spades", onBack, "You + Dewey (Blue)  •  Huey + Louie (Red)")
+        GameHeader("Partnership Spades", onBack, "Hand $handNumber  •  You + Dewey vs. Huey + Louie")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             ScoreBox("SCORE", blueScore, blueBags, redScore, redBags)
             Column(horizontalAlignment = Alignment.End) {
-                Text("Huey  •  Red", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold)
-                Text("Dewey  •  Blue", color = DeepBlue, fontWeight = FontWeight.Bold)
-                Text("Louie  •  Red", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold)
+                Text("Huey  •  Red  •  Bid ${bids.firstOrNull { it.player == 1 }?.tricks ?: "—"}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("Dewey  •  Blue  •  Bid ${bids.firstOrNull { it.player == 2 }?.tricks ?: "—"}", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("Louie  •  Red  •  Bid ${bids.firstOrNull { it.player == 3 }?.tricks ?: "—"}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
         }
-        Spacer(Modifier.height(22.dp))
-        Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF277B55), RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Dewey", color = Color.White, fontWeight = FontWeight.Bold)
-                Text(trick.firstOrNull { it.first == 2 }?.second?.label ?: "🂠", color = Color.White, fontSize = 25.sp)
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    Text(trick.firstOrNull { it.first == 1 }?.second?.label ?: "🂠", color = Color.White, fontSize = 24.sp)
-                    Text(trick.firstOrNull { it.first == 3 }?.second?.label ?: "🂠", color = Color.White, fontSize = 24.sp)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Text("Blue tricks: ${tricks[0] + tricks[2]}", color = DeepBlue, fontWeight = FontWeight.Bold)
+            Text("Red tricks: ${tricks[1] + tricks[3]}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold)
+        }
+        if (phase == "bid") {
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("YOUR BID", color = DeepBlue, fontWeight = FontWeight.Bold)
+                    Text("Choose how many tricks you expect your partnership to take.", color = Color.Gray, fontSize = 11.sp)
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        (0..13).forEach { bid ->
+                            Text(bid.toString(), Modifier.background(if (selectedBid == bid) Blue else Pale, RoundedCornerShape(8.dp)).clickable { selectedBid = bid }.padding(horizontal = 11.dp, vertical = 10.dp), color = if (selectedBid == bid) Color.White else Ink, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { placeBids() }, modifier = Modifier.fillMaxWidth()) { Text("Place bid") }
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(trick.firstOrNull { it.first == 0 }?.second?.label ?: "Your play", color = Color.White, fontSize = 23.sp)
+            }
+        } else {
+            Card(Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = Color(0xFF277B55)), shape = RoundedCornerShape(18.dp)) {
+                Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("DEWEY  •  BLUE", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(plays.firstOrNull { it.player == 2 }?.let { cardLabel(it.card) } ?: "🂠", color = Color.White, fontSize = 26.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("HUEY", color = Color.White, fontSize = 10.sp)
+                            Text(plays.firstOrNull { it.player == 1 }?.let { cardLabel(it.card) } ?: "🂠", color = Color.White, fontSize = 24.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("LOUIE", color = Color.White, fontSize = 10.sp)
+                            Text(plays.firstOrNull { it.player == 3 }?.let { cardLabel(it.card) } ?: "🂠", color = Color.White, fontSize = 24.sp)
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("YOUR PLAY", color = Color.White, fontSize = 10.sp)
+                        Text(plays.firstOrNull { it.player == 0 }?.let { cardLabel(it.card) } ?: "Your turn", color = Color.White, fontSize = 24.sp)
+                    }
+                }
             }
         }
         Text(message, Modifier.padding(vertical = 8.dp), color = Ink, fontSize = 12.sp)
-        Text("YOUR HAND", color = DeepBlue, fontWeight = FontWeight.Bold)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            hands[0].forEach { card ->
-                Text(card.label, Modifier.weight(1f).background(Color.White, RoundedCornerShape(5.dp)).clickable {
-                    if (turn == 0 && (leadSuit < 0 || card.suit == leadSuit || hands[0].none { it.suit == leadSuit })) {
-                        playCard(0, card)
-                        message = "You played ${card.label}. The bots are taking their turns."
-                        // Lightweight automated replies; same legal-follow-suit rule for each bot.
-                        for (p in 1..3) {
-                            val candidates = hands[p].filter { leadSuit < 0 || it.suit == leadSuit }
-                            val chosen = (candidates.ifEmpty { hands[p] }).minByOrNull { it.rank } ?: continue
-                            hands[p].remove(chosen); trick.add(p to chosen)
-                        }
-                        val winner = trick.maxWithOrNull(compareBy<Pair<Int,PlayingCard>> { if (it.second.suit == leadSuit) 1 else 0 }.thenBy { if (it.second.suit == 3) it.second.rank + 20 else it.second.rank })?.first ?: 0
-                        if (winner == 0 || winner == 2) blueScore += 1 else redScore += 1
-                        message = "${names[winner]} wins the trick. Tap a card to lead the next trick."
-                        trick.clear(); leadSuit = -1; turn = 0
-                    } else message = "Follow suit when possible."
-                }.padding(vertical = 10.dp), color = if (card.red) Color.Red else Ink, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+        if (phase == "play" || phase == "roundComplete" || phase == "matchComplete") {
+            Text("YOUR HAND", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                hands[0].forEach { card ->
+                    Text(cardLabel(card), Modifier.background(Color.White, RoundedCornerShape(6.dp)).clickable { playUserCard(card) }.padding(horizontal = 7.dp, vertical = 12.dp),
+                        color = if (card.suit == 1 || card.suit == 2) Color.Red else Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        if (phase == "roundComplete") {
+            Button(onClick = { startNextHand() }, modifier = Modifier.fillMaxWidth()) { Text("Next hand") }
+        }
+        if (phase == "matchComplete") {
+            Button(onClick = {
+                blueScore = 0; redScore = 0; blueBags = 0; redBags = 0; handNumber = 0
+                startNextHand()
+            }, modifier = Modifier.fillMaxWidth()) { Text("New match") }
+        }
+    }
+}
+
+tSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
             }
         }
     }
