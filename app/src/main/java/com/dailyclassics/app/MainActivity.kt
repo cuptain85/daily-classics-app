@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                         "Sudoku" -> SudokuScreen(onBack = { page = "Home" }, prefs = prefs)
                         "Crossword" -> CrosswordScreen(onBack = { page = "Home" }, prefs = prefs)
                         "Spades" -> SpadesScreen(onBack = { page = "Home" })
-                        "Solitaire" -> SolitaireScreen(onBack = { page = "Home" }, drawThree = drawThree)
+                        "Solitaire" -> SolitaireScreen(onBack = { page = "Home" }, drawThree = drawThree, prefs = prefs)
                         "Settings" -> SettingsScreen(
                             drawThree = drawThree,
                             onDrawThree = {
@@ -430,8 +430,12 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 }
 
 @Composable
-private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
-    var game by remember { mutableStateOf(KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)) }
+private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean, prefs: android.content.SharedPreferences) {
+    var game by remember { mutableStateOf(
+        KlondikeEngine.deserialize(prefs.getString("solitaire_state", null))
+            ?: KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)
+    ) }
+    LaunchedEffect(game) { prefs.edit().putString("solitaire_state", KlondikeEngine.serialize(game)).apply() }
     val history = remember { mutableStateListOf<KlondikeState>() }
     val redoHistory = remember { mutableStateListOf<KlondikeState>() }
     var selectedWaste by remember { mutableStateOf(false) }
