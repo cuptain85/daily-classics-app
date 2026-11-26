@@ -17,6 +17,11 @@ class GameEnginesTest {
         }
     }
 
+    @Test fun crosswordBankContainsThousandsOfLicensedClueEntries() {
+        assertTrue(CrosswordWordBank.entries.size >= 13000)
+        assertTrue(CrosswordWordBank.entries.all { it.answer.matches(Regex("[A-Z]{3,10}")) && it.clue.isNotBlank() })
+    }
+
     @Test fun generatedCrosswordsHaveRealIntersectingAcrossAndDownEntries() {
         val puzzle = CrosswordPuzzleGenerator.forDate("2026-11-26")
         assertEquals(169, puzzle.blankGrid.length)
