@@ -111,7 +111,7 @@ object KlondikeEngine {
     fun deal(state: KlondikeState): KlondikeState {
         if (state.stock.isEmpty()) {
             if (state.waste.isEmpty()) return state
-            return state.copy(stock = state.waste.reversed().map { it.copy(faceUp = false) }, waste = emptyList(), moves = state.moves + 1)
+            return state.copy(stock = state.waste.map { it.copy(faceUp = false) }, waste = emptyList(), moves = state.moves + 1)
         }
         val count = minOf(state.drawCount, state.stock.size)
         val dealt = state.stock.takeLast(count).map { it.copy(faceUp = true) }
