@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
@@ -45,21 +44,18 @@ class MainActivity : ComponentActivity() {
                 var drawThree by remember { mutableStateOf(prefs.getBoolean("draw3", false)) }
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Pale) {
                     when (page) {
-                        "Home" -> Home(
-                            onGame = { page = it },
-                            onSettings = { page = "Settings" }
-                        )
+                        "Home" -> Home(onGame = { page = it })
                         "Sudoku" -> SudokuScreen(onBack = { page = "Home" }, prefs = prefs)
                         "Crossword" -> CrosswordScreen(onBack = { page = "Home" }, prefs = prefs)
                         "Spades" -> SpadesScreen(onBack = { page = "Home" })
-                        "Solitaire" -> SolitaireScreen(onBack = { page = "Home" }, drawThree = drawThree, prefs = prefs)
-                        "Settings" -> SettingsScreen(
+                        "Solitaire" -> SolitaireScreen(
+                            onBack = { page = "Home" },
                             drawThree = drawThree,
                             onDrawThree = {
                                 drawThree = it
                                 prefs.edit().putBoolean("draw3", it).apply()
                             },
-                            onBack = { page = "Home" }
+                            prefs = prefs
                         )
                     }
                 }
@@ -69,67 +65,59 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun Home(onGame: (String) -> Unit, onSettings: () -> Unit) {
+private fun Home(onGame: (String) -> Unit) {
     val games = listOf(
-        Triple("Sudoku", "Daily number puzzle", "9"),
-        Triple("Crossword", "Daily word puzzle", "✎"),
-        Triple("Spades", "You + Dewey vs. Huey + Louie", "♠"),
-        Triple("Solitaire", "Classic Klondike", "A")
+        Triple("Sudoku", "🔢", Blue),
+        Triple("Crossword", "✏️", Green),
+        Triple("Spades", "♠️", Blue),
+        Triple("Solitaire", "🃏", Green)
     )
     Column(Modifier.fillMaxSize().padding(18.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("DAILY CLASSICS", color = DeepBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Text("A little play every day.", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-            }
-            Text("⚙", Modifier.background(Color.White, CircleShape).clickable { onSettings() }.padding(13.dp), color = DeepBlue, fontSize = 22.sp)
+        Column {
+            Text(
+                "DAILY CLASSICS",
+                color = DeepBlue,
+                fontSize = 27.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.5.sp
+            )
+            Text(
+                "A little play every day.",
+                color = Ink,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
-        Spacer(Modifier.height(16.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = Blue), shape = RoundedCornerShape(22.dp)) {
-            Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("YOUR DAILY BREAK", color = Color(0xFFD8E9FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("Four classics.\nOne place to play.", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                }
-                Text("🎮", fontSize = 42.sp)
-            }
-        }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(22.dp))
         Text("CHOOSE A GAME", color = DeepBlue, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-        Spacer(Modifier.height(10.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Spacer(Modifier.height(12.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             games.chunked(2).forEach { pair ->
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEachIndexed { index, game ->
-                        val color = if ((games.indexOf(game)) % 2 == 0) Blue else Green
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    pair.forEach { game ->
                         Card(
                             onClick = { onGame(game.first) },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = RoundedCornerShape(22.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                         ) {
-                            Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                Box(Modifier.size(54.dp).background(color, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                                    Text(game.third, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Column(
+                                Modifier.fillMaxSize().padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    Modifier.size(68.dp).background(game.third, RoundedCornerShape(20.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(game.second, fontSize = 38.sp)
                                 }
-                                Spacer(Modifier.height(8.dp))
-                                Text(game.first, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text(game.second, color = Color.Gray, fontSize = 10.sp, textAlign = TextAlign.Center)
-                                Spacer(Modifier.height(10.dp))
-                                Text("Tap to play", color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(12.dp))
+                                Text(game.first, color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
-            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("🏆", fontSize = 25.sp)
-                Column(Modifier.padding(start = 10.dp)) {
-                    Text("Your progress", color = Ink, fontWeight = FontWeight.Bold)
-                    Text("Game progress is saved on this device.", color = Color.Gray, fontSize = 11.sp)
                 }
             }
         }
@@ -411,7 +399,12 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 }
 
 @Composable
-private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean, prefs: android.content.SharedPreferences) {
+private fun SolitaireScreen(
+    onBack: () -> Unit,
+    drawThree: Boolean,
+    onDrawThree: (Boolean) -> Unit,
+    prefs: android.content.SharedPreferences
+) {
     var game by remember { mutableStateOf(
         KlondikeEngine.deserialize(prefs.getString("solitaire_state", null))
             ?: KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)
@@ -440,6 +433,35 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean, prefs: andro
 
     Column(Modifier.fillMaxSize().background(Felt).padding(10.dp)) {
         GameHeader("Klondike Solitaire", onBack, "Score: ${game.score}   Moves: ${game.moves}")
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text("Deal:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(8.dp))
+            FilterChip(
+                selected = !drawThree,
+                onClick = { onDrawThree(false) },
+                label = { Text("Draw 1") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color.White,
+                    selectedLabelColor = DeepBlue,
+                    labelColor = Color.White
+                )
+            )
+            Spacer(Modifier.width(8.dp))
+            FilterChip(
+                selected = drawThree,
+                onClick = { onDrawThree(true) },
+                label = { Text("Draw 3") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color.White,
+                    selectedLabelColor = DeepBlue,
+                    labelColor = Color.White
+                )
+            )
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("STOCK", color = Color.White, fontSize = 9.sp)
@@ -750,18 +772,3 @@ private fun ScoreBox(title: String, blue: Int, blueBags: Int, red: Int, redBags:
     }
 }
 
-@Composable
-private fun SettingsScreen(drawThree: Boolean, onDrawThree: (Boolean) -> Unit, onBack: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(18.dp)) {
-        GameHeader("Settings", onBack)
-        Text("Solitaire deal", color = Ink, fontWeight = FontWeight.Bold)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = !drawThree, onClick = { onDrawThree(false) })
-            Text("Draw 1")
-            Spacer(Modifier.width(20.dp))
-            RadioButton(selected = drawThree, onClick = { onDrawThree(true) })
-            Text("Draw 3")
-        }
-        Text("Your choice is saved on this device.", color = Color.Gray, fontSize = 12.sp)
-    }
-}
