@@ -285,68 +285,44 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
 
 @Composable
 private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences) {
-    data class Entry(val number: Int, val clue: String, val answer: String, val cells: List<Int>, val across: Boolean)
-    val entries = remember {
-        val result = mutableListOf<Entry>()
-        fun add(number: Int, clue: String, answer: String, row: Int, col: Int, across: Boolean) {
-            val cells = answer.indices.map { offset -> if (across) row * 13 + col + offset else (row + offset) * 13 + col }
-            result.add(Entry(number, clue, answer, cells, across))
-        }
-        add(1, "A puzzle of numbered clues and intersecting answers", "CROSSWORD", 6, 2, true)
-        add(2, "The same kind of word puzzle, running vertically", "CROSSWORD", 2, 6, false)
-        add(3, "Do something; take action", "ACT", 2, 5, true)
-        add(4, "Creative work", "ART", 3, 5, true)
-        add(5, "Opposite of cold", "HOT", 4, 5, true)
-        add(6, "Opposite of cold", "HOT", 8, 5, true)
-        add(7, "Creative work", "ART", 9, 5, true)
-        add(8, "Put together; calculate a sum", "ADD", 10, 5, true)
-        add(9, "Perform on stage", "ACT", 5, 2, false)
-        add(10, "Painting, sculpture, or drawing", "ART", 5, 3, false)
-        add(11, "Warm to the touch", "HOT", 5, 4, false)
-        add(12, "Opposite of cold", "HOT", 5, 8, false)
-        add(13, "Creative work", "ART", 5, 9, false)
-        add(14, "Combine numbers", "ADD", 5, 10, false)
-        result
-    }
-    val blocked = remember {
-        val mask = MutableList(169) { true }
-        entries.forEach { entry -> entry.cells.forEach { mask[it] = false } }
-        mask
-    }
-    val solutionGrid = remember {
-        CharArray(169) { if (blocked[it]) '#' else '.' }.also { grid ->
-            entries.forEach { entry -> entry.cells.forEachIndexed { index, cell -> grid[cell] = entry.answer[index] } }
-        }
-    }
     var date by remember { mutableStateOf(LocalDate.now()) }
+    val puzzle = remember(date) { CrosswordPuzzleGenerator.forDate(date.toString()) }
+    val entries = puzzle.entries
+    val blocked = remember(puzzle) { puzzle.blankGrid.map { it == '#' } }
     val savedKey = "crossword_" + date.toString()
-    val cells = remember(date) {
+    val cells = remember(puzzle) {
         mutableStateListOf<Char>().apply {
             val saved = prefs.getString(savedKey, null)
-            (saved?.takeIf { it.length == 169 } ?: String(CharArray(169) { if (blocked[it]) '#' else '.' })).forEach { add(it) }
+            (saved?.takeIf { it.length == 169 } ?: puzzle.blankGrid).forEach { add(it) }
         }
     }
-    var activeIndex by remember(date) { mutableIntStateOf(0) }
-    var selectedCell by remember(date) { mutableIntStateOf(entries[0].cells.first()) }
-    var lastTappedCell by remember(date) { mutableIntStateOf(-1) }
-    var message by remember(date) { mutableStateOf("Tap a square or a clue. Fill the answers with the letter keys.") }
+    var activeIndex by remember(puzzle) { mutableIntStateOf(0) }
+    var selectedCell by remember(puzzle) { mutableIntStateOf(entries.first().cells.first()) }
+    var lastTappedCell by remember(puzzle) { mutableIntStateOf(-1) }
+    var message by remember(puzzle) { mutableStateOf("Tap a square or clue. Fill the answers with the letter keys.") }
     val clueListState = rememberLazyListState()
-    LaunchedEffect(activeIndex) { clueListState.animateScrollToItem(activeIndex) }
     val active = entries[activeIndex]
+    val completed = entries.count { entry -> entry.cells.all { cells[it] == puzzle.solutionGrid[it] } }
 
+    LaunchedEffect(activeIndex) { clueListState.animateScrollToItem(activeIndex) }
+
+    fun save() { prefs.edit().putString(savedKey, cells.joinToString("")).apply() }
     fun selectCell(cell: Int) {
         if (blocked[cell]) return
         val options = entries.indices.filter { cell in entries[it].cells }
         if (options.isNotEmpty()) {
             val sameCellAgain = lastTappedCell == cell
             val current = options.indexOf(activeIndex)
-            val next = if (sameCellAgain && options.size > 1) options[(current + 1).mod(options.size)] else options.firstOrNull { entries[it].across == active.across } ?: options.first()
+            val next = if (sameCellAgain && options.size > 1) {
+                options[(current + 1).mod(options.size)]
+            } else {
+                options.firstOrNull { entries[it].across == active.across } ?: options.first()
+            }
             activeIndex = next
             selectedCell = cell
             lastTappedCell = cell
         }
     }
-    fun save() { prefs.edit().putString(savedKey, cells.joinToString("")).apply() }
     fun enterLetter(letter: Char) {
         if (blocked[selectedCell]) return
         cells[selectedCell] = letter
@@ -362,7 +338,7 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
     }
 
     Column(Modifier.fillMaxSize().padding(10.dp)) {
-        GameHeader("Daily Crossword", onBack, "13 × 13 mini puzzle  •  ${date}")
+        GameHeader("Daily Crossword", onBack, "13 × 13  •  ${date}")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { date = date.minusDays(1) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp)) { Text("‹ Previous") }
             Text(if (date == LocalDate.now()) "Today" else date.toString(), color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -374,7 +350,10 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
                 Text(active.clue, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
         }
-        Text(message, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(vertical = 5.dp))
+        Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(message, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f))
+            Text("$completed/${entries.size} words", color = DeepBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
         Column(Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(1.dp)) {
             for (row in 0 until 13) {
                 Row(Modifier.weight(1f)) {
