@@ -57,6 +57,10 @@ The crossword clue/answer data is derived from [Open Crossword Bank](https://git
 - Application ID: `com.dailyclassics.app`
 - Current version: `0.1.0`
 
+## Source code license
+
+No license has been selected for the application source code yet. Public visibility of this repository does not by itself grant permission to reuse, modify, or redistribute that code. The CC0-1.0 dedication described above applies to the imported crossword data only, not automatically to the app source.
+
 ## Feedback and bug reports
 
 Please use [GitHub Issues](https://github.com/cuptain85/daily-classics-app/issues). Include your Android version, device model, the game you were playing, and clear steps to reproduce the issue. Do not include private or sensitive information in bug reports.
