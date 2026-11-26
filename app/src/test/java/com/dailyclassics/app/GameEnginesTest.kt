@@ -188,4 +188,19 @@ class GameEnginesTest {
         assertEquals(43, SpadesRules.handScore(4, 7))
     }
 
+    @Test fun spadesNilBidEarnsBonusWhenPlayerTakesNoTricks() {
+        val bids = listOf(SpadesBid(0, 0), SpadesBid(1, 4), SpadesBid(2, 3), SpadesBid(3, 2))
+        val result = SpadesEngine.scoreHand(bids, listOf(0, 4, 6, 3), 0, 0)
+        assertEquals(133, result.blueScore)
+        assertEquals(3, result.blueBags)
+        assertEquals(61, result.redScore)
+    }
+
+    @Test fun spadesFailedNilBidGetsPenaltyWhilePartnerContractStillCounts() {
+        val bids = listOf(SpadesBid(0, 0), SpadesBid(1, 4), SpadesBid(2, 3), SpadesBid(3, 2))
+        val result = SpadesEngine.scoreHand(bids, listOf(1, 4, 3, 4), 0, 0)
+        assertEquals(-59, result.blueScore)
+        assertEquals(1, result.blueBags)
+    }
+
 }
