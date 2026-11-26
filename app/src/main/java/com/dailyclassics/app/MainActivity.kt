@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
+import java.time.LocalDate
 
 private val Blue = Color(0xFF1769D2)
 private val DeepBlue = Color(0xFF104A9B)
@@ -143,10 +144,11 @@ private fun GameHeader(title: String, onBack: () -> Unit, extra: String = "") {
 
 @Composable
 private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences) {
-    val puzzle = "530070000600195000098000060800060003400803001700020006060000280000419005000080079"
-    val solution = "534678912672195348198342567859761423426853791713924856961537284287419635345286179"
+    val daily = remember { DailySudokuGenerator.forDate(LocalDate.now().toString()) }
+    val puzzle = daily.puzzle
+    val solution = daily.solution
     val cells = remember { mutableStateListOf<Char>().apply {
-        val saved = prefs.getString("sudoku", null)
+        val saved = prefs.getString("sudoku_" + daily.dateKey, null)
         (saved ?: puzzle).forEach { add(it) }
     } }
     var selected by remember { mutableIntStateOf(0) }
@@ -203,7 +205,7 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                             } else {
                                 cells[selected] = ('0'.code + n).toChar()
                                 notes.remove(selected)
-                                prefs.edit().putString("sudoku", cells.joinToString("")).apply()
+                                prefs.edit().putString("sudoku_" + daily.dateKey, cells.joinToString("")).apply()
                             }
                         }
                     }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) { Text(n.toString(), fontSize = 19.sp) }
