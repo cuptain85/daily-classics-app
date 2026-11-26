@@ -38,7 +38,7 @@ class GameEnginesTest {
         val moved = KlondikeEngine.moveTableauRun(state, 0, 1, 1)
         assertNotNull(moved)
         assertEquals(listOf(KlondikeCard(7, 0, true)), moved!!.tableau[0])
-        assertEquals(listOf(KlondikeCard(7, 2), KlondikeCard(6, 1), KlondikeCard(5, 0)), moved.tableau[1])
+        assertEquals(listOf(KlondikeCard(7, 3), KlondikeCard(6, 1), KlondikeCard(5, 0)), moved.tableau[1])
     }
 
     @Test fun spadesBotsBidAndMustFollowSuit() {
