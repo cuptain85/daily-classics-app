@@ -198,7 +198,7 @@ class GameEnginesTest {
 
     @Test fun spadesFailedNilBidGetsPenaltyWhilePartnerContractStillCounts() {
         val bids = listOf(SpadesBid(0, 0), SpadesBid(1, 4), SpadesBid(2, 3), SpadesBid(3, 2))
-        val result = SpadesEngine.scoreHand(bids, listOf(1, 4, 3, 4), 0, 0)
+        val result = SpadesEngine.scoreHand(bids, listOf(1, 4, 3, 5), 0, 0)
         assertEquals(-69, result.blueScore)
         assertEquals(1, result.blueBags)
     }
