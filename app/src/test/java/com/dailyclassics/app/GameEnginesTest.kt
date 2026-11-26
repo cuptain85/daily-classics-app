@@ -105,3 +105,45 @@ class GameEnginesTest {
         assertEquals(51, result.redScore)
     }
 }
+
+    @Test fun klondikeNewDealContainsOneCompleteStandardDeck() {
+        val state = KlondikeEngine.newGame(seed = 20261126, drawCount = 1)
+        val cards = state.stock + state.waste + state.tableau.flatten() + state.foundations.flatten()
+        assertEquals(52, cards.size)
+        assertEquals(52, cards.map { it.rank to it.suit }.toSet().size)
+        assertEquals(7, state.tableau.size)
+        assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), state.tableau.map { it.size })
+        assertTrue(state.tableau.flatten().count { it.faceUp } == 7)
+    }
+
+    @Test fun klondikeRejectsMalformedSavedState() {
+        assertNull(KlondikeEngine.deserialize("not-a-valid-save"))
+        assertNull(KlondikeEngine.deserialize(null))
+        assertNull(KlondikeEngine.deserialize(""))
+    }
+
+    @Test fun spadesCannotBeLedUntilBrokenUnlessHandHasOnlySpades() {
+        val mixedHand = listOf(GameCard(4, 0), GameCard(8, 3), GameCard(2, 1))
+        assertEquals(listOf(mixedHand[0], mixedHand[2]), SpadesEngine.legalCards(mixedHand, null, false))
+        val onlySpades = listOf(GameCard(8, 3), GameCard(2, 3))
+        assertEquals(onlySpades, SpadesEngine.legalCards(onlySpades, null, false))
+    }
+
+    @Test fun spadesFollowSuitTakesPriorityOverBreakingSpades() {
+        val hand = listOf(GameCard(4, 0), GameCard(8, 3), GameCard(2, 1))
+        assertEquals(listOf(hand[0]), SpadesEngine.legalCards(hand, 0, false))
+    }
+
+    @Test fun crosswordEntriesStayInsideGridAndMatchEverySolutionCell() {
+        val puzzle = CrosswordPuzzleGenerator.forDate("2026-11-26")
+        puzzle.entries.forEach { entry ->
+            assertTrue(entry.cells.all { it in 0 until 169 })
+            assertEquals(entry.answer.length, entry.cells.distinct().size)
+            assertEquals(entry.answer, entry.cells.map { puzzle.solutionGrid[it] }.joinToString(""))
+            assertTrue(entry.number > 0)
+        }
+        puzzle.solutionGrid.forEachIndexed { index, cell ->
+            if (cell == '#') assertEquals('#', puzzle.blankGrid[index])
+            else assertEquals('.', puzzle.blankGrid[index])
+        }
+    }
