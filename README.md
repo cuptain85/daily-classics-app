@@ -13,6 +13,8 @@ The home screen uses a bright blue-and-green design. Sudoku and Crossword progre
 
 This repository is public and the app builds successfully in GitHub Actions. **The app is currently a preview/beta, not a finished Play Store release.** Game screens and core rules are implemented to varying degrees, but the complete experience still needs hands-on testing across Android devices, accessibility review, and final gameplay polish. In particular, verify full Spades bidding/trick flow and all Solitaire move paths before treating the app as production-ready.
 
+See [RELEASE_READINESS.md](RELEASE_READINESS.md) for the current launch blockers and device-testing checklist.
+
 ## Try the Android preview
 
 1. Open the [latest successful Android build](https://github.com/cuptain85/daily-classics-app/actions/workflows/android-build.yml).
