@@ -196,8 +196,15 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                     val n = row * 3 + col
                     Button(onClick = {
                         if (puzzle[selected] == '0') {
-                            if (notesMode) notes[selected] = (notes[selected].orEmpty() + n.toString()).filter { it != n.toString() } + n.toString()
-                            else { cells[selected] = ('0'.code + n).toChar(); notes.remove(selected); prefs.edit().putString("sudoku", cells.joinToString("")).apply() }
+                            if (notesMode) {
+                                val digit = ('0'.code + n).toChar()
+                                val current = notes[selected].orEmpty()
+                                notes[selected] = if (digit in current) current.filterNot { it == digit } else current + digit
+                            } else {
+                                cells[selected] = ('0'.code + n).toChar()
+                                notes.remove(selected)
+                                prefs.edit().putString("sudoku", cells.joinToString("")).apply()
+                            }
                         }
                     }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) { Text(n.toString(), fontSize = 19.sp) }
                 }
