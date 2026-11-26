@@ -27,6 +27,11 @@ class GameEnginesTest {
         assertTrue(state.stock.isNotEmpty() || state.waste.isNotEmpty())
     }
 
+    @Test fun klondikeSaveStateRoundTripsExactly() {
+        val state = KlondikeEngine.deal(KlondikeEngine.newGame(seed = 42, drawCount = 3))
+        assertEquals(state, KlondikeEngine.deserialize(KlondikeEngine.serialize(state)))
+    }
+
     @Test fun klondikeDrawThreeRecycleKeepsTopCardOrder() {
         var state = KlondikeEngine.newGame(seed = 19, drawCount = 3)
         repeat(8) { state = KlondikeEngine.deal(state) }
