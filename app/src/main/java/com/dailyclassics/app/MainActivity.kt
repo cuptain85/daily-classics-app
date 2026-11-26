@@ -468,7 +468,13 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
                 history.clear()
                 game = KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)
                 selectedWaste = false; selectedTableau = null; selectedFoundation = -1
-                message @Composable
+                message = "New game dealt."
+            }, modifier = Modifier.weight(1f)) { Text("New deal") }
+        }
+    }
+}
+
+@Composable
 private fun SpadesScreen(onBack: () -> Unit) {
     val names = listOf("You", "Huey", "Dewey", "Louie")
     var handNumber by remember { mutableIntStateOf(1) }
@@ -640,12 +646,6 @@ private fun SpadesScreen(onBack: () -> Unit) {
                 blueScore = 0; redScore = 0; blueBags = 0; redBags = 0; handNumber = 0
                 startNextHand()
             }, modifier = Modifier.fillMaxWidth()) { Text("New match") }
-        }
-    }
-}
-
-tSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
-            }
         }
     }
 }
