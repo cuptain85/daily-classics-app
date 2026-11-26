@@ -344,6 +344,7 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
     var game by remember { mutableStateOf(KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)) }
     val history = remember { mutableStateListOf<KlondikeState>() }
+    val redoHistory = remember { mutableStateListOf<KlondikeState>() }
     var selectedWaste by remember { mutableStateOf(false) }
     var selectedTableau by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var selectedFoundation by remember { mutableIntStateOf(-1) }
@@ -354,6 +355,7 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
             message = "That move is not allowed."
         } else {
             history.add(game)
+            redoHistory.clear()
             game = next
             selectedWaste = false
             selectedTableau = null
@@ -368,7 +370,7 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("STOCK", color = Color.White, fontSize = 9.sp)
                 Text(if (game.stock.isEmpty()) "↻" else "▧", Modifier.background(Color(0xFF0E4B37), RoundedCornerShape(7.dp)).clickable {
-                    history.add(game); game = KlondikeEngine.deal(game)
+                    history.add(game); redoHistory.clear(); game = KlondikeEngine.deal(game)
                     selectedWaste = false; selectedTableau = null; selectedFoundation = -1
                     message = if (game.stock.isEmpty() && game.waste.isEmpty()) "No cards left to deal." else "Cards dealt."
                 }.padding(horizontal = 18.dp, vertical = 14.dp), color = Color.White, fontSize = 22.sp)
@@ -451,11 +453,20 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.padding(top = 8.dp)) {
             OutlinedButton(onClick = {
                 if (history.isNotEmpty()) {
+                    redoHistory.add(game)
                     game = history.removeAt(history.lastIndex)
                     selectedWaste = false; selectedTableau = null; selectedFoundation = -1
                     message = "Last move undone."
                 } else message = "No moves to undo yet."
             }, modifier = Modifier.weight(1f)) { Text("Undo") }
+            OutlinedButton(onClick = {
+                if (redoHistory.isNotEmpty()) {
+                    history.add(game)
+                    game = redoHistory.removeAt(redoHistory.lastIndex)
+                    selectedWaste = false; selectedTableau = null; selectedFoundation = -1
+                    message = "Move redone."
+                } else message = "Nothing to redo yet."
+            }, modifier = Modifier.weight(1f)) { Text("Redo") }
             OutlinedButton(onClick = {
                 val top = game.waste.lastOrNull()
                 val move = when {
@@ -465,7 +476,7 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
                 message = move ?: "Try uncovering face-down cards and moving Kings to empty columns."
             }, modifier = Modifier.weight(1f)) { Text("Hint") }
             Button(onClick = {
-                history.clear()
+                history.clear(); redoHistory.clear()
                 game = KlondikeEngine.newGame(System.currentTimeMillis().toInt(), if (drawThree) 3 else 1)
                 selectedWaste = false; selectedTableau = null; selectedFoundation = -1
                 message = "New game dealt."
