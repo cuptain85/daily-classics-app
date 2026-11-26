@@ -114,7 +114,7 @@ private fun Home(onGame: (String) -> Unit, onSettings: () -> Unit) {
                                 Text(game.first, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                 Text(game.second, color = Color.Gray, fontSize = 10.sp, textAlign = TextAlign.Center)
                                 Spacer(Modifier.height(10.dp))
-                                Text("Open game  •  Calendar", color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Tap to play", color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
