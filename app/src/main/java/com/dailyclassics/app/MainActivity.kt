@@ -360,7 +360,7 @@ private fun SolitaireScreen(onBack: () -> Unit, drawThree: Boolean) {
                     pile.forEachIndexed { index, card ->
                         Text(if (card.faceUp) card.label else "▧",
                             Modifier.fillMaxWidth().background(
-                                if (selectedTableau == column to index) Color(0xFFFFE39B) else Color.White,
+                                if (selectedTableau == (column to index)) Color(0xFFFFE39B) else Color.White,
                                 RoundedCornerShape(4.dp)
                             ).clickable {
                                 if (card.faceUp) {
