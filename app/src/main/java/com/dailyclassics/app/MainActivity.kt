@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -474,106 +475,119 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
     var activeIndex by remember(puzzle) { mutableIntStateOf(0) }
     var selectedCell by remember(puzzle) { mutableIntStateOf(entries.first().cells.first()) }
     var lastTappedCell by remember(puzzle) { mutableIntStateOf(-1) }
-    var message by remember(puzzle) { mutableStateOf("Tap a square or clue. Fill the answers with the letter keys.") }
+    var message by remember(puzzle) { mutableStateOf("") }
+    var keyboardText by remember { mutableStateOf("") }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val clueListState = rememberLazyListState()
     val active = entries[activeIndex]
     val completed = entries.count { entry -> entry.cells.all { cells[it] == puzzle.solutionGrid[it] } }
+    val cellNumbers = remember(puzzle) { entries.groupBy { it.cells.first() }.mapValues { (_, atCell) -> it.value.minOf { entry -> entry.number } } }
 
     LaunchedEffect(activeIndex) { clueListState.animateScrollToItem(activeIndex) }
-
     fun save() { prefs.edit().putString(savedKey, cells.joinToString("")).apply() }
-    fun selectCell(cell: Int) {
-        if (blocked[cell]) return
-        val options = entries.indices.filter { cell in entries[it].cells }
-        if (options.isNotEmpty()) {
-            val sameCellAgain = lastTappedCell == cell
-            val current = options.indexOf(activeIndex)
-            val next = if (sameCellAgain && options.size > 1) {
-                options[(current + 1).mod(options.size)]
-            } else {
-                options.firstOrNull { entries[it].across == active.across } ?: options.first()
-            }
-            activeIndex = next
-            selectedCell = cell
-            lastTappedCell = cell
-        }
-    }
     fun enterLetter(letter: Char) {
-        if (blocked[selectedCell]) return
-        cells[selectedCell] = letter
+        if (blocked[selectedCell] || !letter.isLetter()) return
+        cells[selectedCell] = letter.uppercaseChar()
         save()
         val position = active.cells.indexOf(selectedCell)
         if (position >= 0 && position < active.cells.lastIndex) selectedCell = active.cells[position + 1]
     }
-    fun eraseLetter() {
-        if (!blocked[selectedCell]) {
-            cells[selectedCell] = '.'
-            save()
-        }
+    fun selectCell(cell: Int) {
+        if (blocked[cell]) return
+        val options = entries.indices.filter { cell in entries[it].cells }
+        if (options.isEmpty()) return
+        val sameCellAgain = lastTappedCell == cell
+        val current = options.indexOf(activeIndex)
+        val next = if (sameCellAgain && options.size > 1) options[(current + 1).mod(options.size)]
+            else options.firstOrNull { entries[it].across == active.across } ?: options.first()
+        activeIndex = next
+        selectedCell = cell
+        lastTappedCell = cell
+        keyboardText = ""
+        focusRequester.requestFocus()
+        keyboard?.show()
     }
 
-    Column(Modifier.fillMaxSize().padding(10.dp)) {
-        GameHeader("Daily Crossword", onBack, "13 × 13  •  ${date}")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { date = date.minusDays(1) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp)) { Text("‹ Previous") }
-            Text(if (date == LocalDate.now()) "Today" else date.toString(), color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            OutlinedButton(onClick = { date = date.plusDays(1) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp)) { Text("Next ›") }
-        }
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.fillMaxWidth().padding(9.dp)) {
-                Text("${active.number} ${if (active.across) "Across" else "Down"}", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Text(active.clue, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+    Column(Modifier.fillMaxSize().background(Color.White).padding(horizontal = 10.dp, vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("‹", Modifier.clickable { onBack() }.padding(end = 12.dp), color = Color.Black, fontSize = 30.sp)
+            Column(Modifier.weight(1f)) {
+                Text("CROSSWORD", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                Text(date.toString(), color = Color.DarkGray, fontSize = 11.sp)
             }
+            Text("$" + "completed/${entries.size}", color = Color.Black, fontSize = 12.sp)
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(message, color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f))
-            Text("$completed/${entries.size} words", color = DeepBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            TextButton(onClick = { date = date.minusDays(1) }) { Text("‹ Previous", color = Color.Black) }
+            TextButton(onClick = { date = date.plusDays(1) }) { Text("Next ›", color = Color.Black) }
         }
-        Column(Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(1.dp)) {
-            for (row in 0 until 13) {
-                Row(Modifier.weight(1f)) {
-                    for (col in 0 until 13) {
-                        val cell = row * 13 + col
-                        val isBlocked = blocked[cell]
-                        val isActive = cell in active.cells
-                        Box(
-                            Modifier.weight(1f).fillMaxHeight().padding(0.5.dp)
-                                .background(when { isBlocked -> DeepBlue; cell == selectedCell -> Color(0xFFFFD76A); isActive -> Color(0xFFB8D9FF); else -> Color.White })
-                                .clickable { selectCell(cell) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (!isBlocked) Text(cells[cell].takeIf { it != '.' && it != '#' }?.toString() ?: "", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1f).background(Color.Black).padding(1.dp)) {
+            Column(Modifier.fillMaxSize()) {
+                for (row in 0 until 13) {
+                    Row(Modifier.weight(1f)) {
+                        for (col in 0 until 13) {
+                            val cell = row * 13 + col
+                            val isBlock = blocked[cell]
+                            Box(
+                                Modifier.weight(1f).fillMaxHeight().padding(0.35.dp)
+                                    .background(if (isBlock) Color.Black else if (cell == selectedCell) Color(0xFFE8E8E8) else Color.White)
+                                    .clickable(enabled = !isBlock) { selectCell(cell) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!isBlock) {
+                                    val letter = cells[cell].takeIf { it != '.' && it != '#' }?.toString() ?: ""
+                                    Text(letter, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                    cellNumbers[cell]?.let { number ->
+                                        Text(number.toString(), Modifier.align(Alignment.TopStart).padding(start = 1.dp),
+                                            color = Color.Black, fontSize = 6.sp, lineHeight = 7.sp)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        Text("CLUES — tap to jump to an answer", color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.padding(vertical = 5.dp))
+        Text("CLUES", Modifier.padding(top = 7.dp, bottom = 3.dp), color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         LazyColumn(state = clueListState, modifier = Modifier.weight(1f)) {
-            items(entries) { entry ->
+            item { Text("ACROSS", Modifier.fillMaxWidth().background(Color(0xFFEDEDED)).padding(6.dp), color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            items(entries.filter { it.across }) { entry ->
                 val index = entries.indexOf(entry)
-                Text("${entry.number} ${if (entry.across) "Across" else "Down"}  •  ${entry.clue} (${entry.answer.length})",
-                    Modifier.fillMaxWidth().clickable { activeIndex = index; selectedCell = entry.cells.first(); lastTappedCell = -1 }
-                        .background(if (index == activeIndex) Color(0xFFD8E9FF) else Color.Transparent)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    color = Ink, fontSize = 10.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal)
+                Text("${entry.number}.  ${entry.clue}",
+                    Modifier.fillMaxWidth().clickable { activeIndex = index; selectedCell = entry.cells.first(); lastTappedCell = -1; focusRequester.requestFocus(); keyboard?.show() }
+                        .background(if (index == activeIndex) Color(0xFFF0F0F0) else Color.White).padding(horizontal = 7.dp, vertical = 5.dp),
+                    color = Color.Black, fontSize = 12.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal)
+            }
+            item { Text("DOWN", Modifier.fillMaxWidth().background(Color(0xFFEDEDED)).padding(6.dp), color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            items(entries.filter { !it.across }) { entry ->
+                val index = entries.indexOf(entry)
+                Text("${entry.number}.  ${entry.clue}",
+                    Modifier.fillMaxWidth().clickable { activeIndex = index; selectedCell = entry.cells.first(); lastTappedCell = -1; focusRequester.requestFocus(); keyboard?.show() }
+                        .background(if (index == activeIndex) Color(0xFFF0F0F0) else Color.White).padding(horizontal = 7.dp, vertical = 5.dp),
+                    color = Color.Black, fontSize = 12.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal)
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            ('A'..'M').forEach { letter ->
-                Text(letter.toString(), Modifier.weight(1f).background(Color.White, RoundedCornerShape(4.dp)).clickable { enterLetter(letter) }.padding(vertical = 8.dp), textAlign = TextAlign.Center, color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
+        BasicTextField(
+            value = keyboardText,
+            onValueChange = { value ->
+                value.lastOrNull { it.isLetter() }?.let { enterLetter(it) }
+                keyboardText = ""
+            },
+            modifier = Modifier.size(1.dp).focusRequester(focusRequester),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent)
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Selected: ${active.number} ${if (active.across) "Across" else "Down"}", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            TextButton(onClick = { if (!blocked[selectedCell]) { cells[selectedCell] = '.'; save() } }) { Text("Erase", color = Color.Black) }
+            TextButton(onClick = {
+                val correct = entries.all { entry -> entry.cells.map { cells[it] }.joinToString("") == entry.answer }
+                message = if (correct) "Puzzle complete." else "Keep solving."
+            }) { Text("Check", color = Color.Black) }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            ('N'..'Z').forEach { letter ->
-                Text(letter.toString(), Modifier.weight(1f).background(Color.White, RoundedCornerShape(4.dp)).clickable { enterLetter(letter) }.padding(vertical = 8.dp), textAlign = TextAlign.Center, color = DeepBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-            Text("⌫", Modifier.weight(1f).background(Color(0xFFFFE0E0), RoundedCornerShape(4.dp)).clickable { eraseLetter() }.padding(vertical = 8.dp), textAlign = TextAlign.Center, color = Color.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        }
-        OutlinedButton(onClick = {
-            val correct = entries.all { entry -> entry.cells.map { cells[it] }.joinToString("") == entry.answer }
-            message = if (correct) "Perfect! You completed the crossword." else "Not quite yet. Keep filling the crossing answers."
-        }, modifier = Modifier.fillMaxWidth()) { Text("Check puzzle") }
+        if (message.isNotEmpty()) Text(message, color = Color.DarkGray, fontSize = 11.sp)
     }
 }
 
