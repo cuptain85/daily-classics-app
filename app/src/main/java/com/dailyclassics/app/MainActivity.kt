@@ -599,6 +599,34 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 }
 
 @Composable
+private fun RealPlayingCard(card: PlayingCard?, modifier: Modifier = Modifier, faceDown: Boolean = false, selected: Boolean = false, emptySuit: String? = null) {
+    val ink = if (card?.red == true) Color(0xFFC52232) else Color(0xFF171717)
+    Box(modifier.aspectRatio(0.70f)
+        .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFFFFD56A) else Color(0xFF202020), RoundedCornerShape(5.dp))
+        .background(if (faceDown) Color(0xFF173B69) else if (card != null) Color(0xFFFFFEFA) else Color(0xFF0D573D), RoundedCornerShape(5.dp))
+        .padding(2.dp), contentAlignment = Alignment.Center) {
+        if (faceDown) {
+            Box(Modifier.fillMaxSize().border(1.dp, Color(0xFFE0D3AD), RoundedCornerShape(3.dp)).padding(2.dp)
+                .border(1.dp, Color(0xFF9EB2C9), RoundedCornerShape(2.dp)), contentAlignment = Alignment.Center) {
+                Text("✦", color = Color(0xFFE0D3AD), fontSize = 20.sp)
+            }
+        } else if (card != null) {
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text(card.label.dropLast(1), color = ink, fontSize = 10.sp, fontWeight = FontWeight.Black, lineHeight = 10.sp)
+                    Text(card.symbol, color = ink, fontSize = 9.sp, lineHeight = 9.sp)
+                }
+                Text(card.symbol, Modifier.align(Alignment.CenterHorizontally), color = ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Column(Modifier.align(Alignment.End), horizontalAlignment = Alignment.End) {
+                    Text(card.symbol, color = ink, fontSize = 9.sp, lineHeight = 9.sp)
+                    Text(card.label.dropLast(1), color = ink, fontSize = 10.sp, fontWeight = FontWeight.Black, lineHeight = 10.sp)
+                }
+            }
+        } else Text(emptySuit ?: "♧", color = Color(0xFFB5D4C3), fontSize = 22.sp)
+    }
+}
+
+@Composable
 private fun SolitaireScreen(
     onBack: () -> Unit,
     drawThree: Boolean,
@@ -665,20 +693,20 @@ private fun SolitaireScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("STOCK", color = Color.White, fontSize = 9.sp)
-                Text(if (game.stock.isEmpty()) "↻" else "▧", Modifier.background(Color(0xFF0E4B37), RoundedCornerShape(7.dp)).clickable {
+                Box(Modifier.width(48.dp).clickable {
                     history.add(game); redoHistory.clear(); game = KlondikeEngine.deal(game)
                     selectedWaste = false; selectedTableau = null; selectedFoundation = -1
                     message = if (game.stock.isEmpty() && game.waste.isEmpty()) "No cards left to deal." else "Cards dealt."
-                }.padding(horizontal = 18.dp, vertical = 14.dp), color = Color.White, fontSize = 22.sp)
+                }) { RealPlayingCard(null, Modifier.fillMaxWidth(), faceDown = game.stock.isNotEmpty()) }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("WASTE", color = Color.White, fontSize = 9.sp)
-                Text(game.waste.lastOrNull()?.label ?: "—", Modifier.background(if (selectedWaste) Color(0xFFFFE39B) else Color.White, RoundedCornerShape(7.dp)).clickable {
+                Box(Modifier.width(48.dp).clickable {
                     if (game.waste.isNotEmpty()) {
                         selectedWaste = true; selectedTableau = null; selectedFoundation = -1
                         message = "Waste card selected. Tap a tableau column or foundation."
                     }
-                }.padding(horizontal = 14.dp, vertical = 14.dp), color = game.waste.lastOrNull()?.let { if (it.isRed) Color.Red else Ink } ?: Ink, fontWeight = FontWeight.Bold)
+                }) { RealPlayingCard(game.waste.lastOrNull(), Modifier.fillMaxWidth(), selected = selectedWaste) }
             }
             game.foundations.forEachIndexed { suit, pile ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -722,26 +750,20 @@ private fun SolitaireScreen(
                 }.padding(2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF0E4B37), RoundedCornerShape(4.dp)).padding(vertical = 10.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
                     pile.forEachIndexed { index, card ->
-                        Text(if (card.faceUp) card.label else "▧",
-                            Modifier.fillMaxWidth().background(
-                                if (selectedTableau == (column to index)) Color(0xFFFFE39B) else Color.White,
-                                RoundedCornerShape(4.dp)
-                            ).clickable {
-                                if (card.faceUp) {
-                                    if (selectedFoundation >= 0) commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
-                                    else if (selectedWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
-                                    else if (selectedTableau != null && selectedTableau!!.first != column) {
-                                        val source = selectedTableau!!
-                                        commit(KlondikeEngine.moveTableauRun(game, source.first, source.second, column))
-                                    } else {
-                                        selectedTableau = column to index
-                                        selectedWaste = false
-                                        message = "Selected run beginning with ${card.label}."
-                                    }
+                        Box(Modifier.fillMaxWidth().clickable {
+                            if (card.faceUp) {
+                                if (selectedFoundation >= 0) commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
+                                else if (selectedWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
+                                else if (selectedTableau != null && selectedTableau!!.first != column) {
+                                    val source = selectedTableau!!
+                                    commit(KlondikeEngine.moveTableauRun(game, source.first, source.second, column))
+                                } else {
+                                    selectedTableau = column to index
+                                    selectedWaste = false
+                                    message = "Selected run beginning with ${card.label}."
                                 }
-                            }.padding(vertical = 8.dp),
-                            color = if (!card.faceUp) Color.White else if (card.isRed) Color.Red else Ink,
-                            textAlign = TextAlign.Center, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }) { RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth(), faceDown = !card.faceUp, selected = selectedTableau == (column to index)) }
                     }
                 }
             }
