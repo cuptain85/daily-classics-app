@@ -21,6 +21,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawWithContent
@@ -838,26 +846,54 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 
 @Composable
 private fun RealPlayingCard(card: KlondikeCard?, modifier: Modifier = Modifier, faceDown: Boolean = false, selected: Boolean = false, emptySuit: String? = null) {
-    val ink = if (card?.isRed == true) Color(0xFFC52232) else Color(0xFF171717)
-    Box(modifier.aspectRatio(0.70f)
-        .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFFFFD56A) else Color(0xFF202020), RoundedCornerShape(5.dp))
-        .background(if (faceDown) Color(0xFF173B69) else if (card != null) Color(0xFFFFFEFA) else Color(0xFF0D573D), RoundedCornerShape(5.dp))
-        .padding(2.dp), contentAlignment = Alignment.Center) {
+    val ink = if (card?.isRed == true) Color(0xFFB51F32) else Color(0xFF15191F)
+    Box(
+        modifier.aspectRatio(0.685f)
+            .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFFFFD56A) else Color(0xFF252525), RoundedCornerShape(6.dp))
+            .background(if (faceDown) Color(0xFF123966) else if (card != null) Color(0xFFFFFEF9) else Color(0xFF0D573D), RoundedCornerShape(6.dp))
+            .padding(2.dp),
+        contentAlignment = Alignment.Center
+    ) {
         if (faceDown) {
-            Box(Modifier.fillMaxSize().border(1.dp, Color(0xFFE0D3AD), RoundedCornerShape(3.dp)).padding(2.dp)
-                .border(1.dp, Color(0xFF9EB2C9), RoundedCornerShape(2.dp)), contentAlignment = Alignment.Center) {
-                Text("✦", color = Color(0xFFE0D3AD), fontSize = 20.sp)
+            Box(Modifier.fillMaxSize().border(1.dp, Color(0xFFE5D5A8), RoundedCornerShape(4.dp)).padding(2.dp)
+                .background(Color(0xFF1B4778), RoundedCornerShape(3.dp))
+                .border(1.dp, Color(0xFF91A9C6), RoundedCornerShape(3.dp)), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("✦", color = Color(0xFFE5D5A8), fontSize = 18.sp)
+                    Text("✧", color = Color(0xFFE5D5A8), fontSize = 14.sp)
+                    Text("✦", color = Color(0xFFE5D5A8), fontSize = 18.sp)
+                }
             }
         } else if (card != null) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text(card.label.dropLast(1), color = ink, fontSize = 10.sp, fontWeight = FontWeight.Black, lineHeight = 10.sp)
-                    Text(card.label.takeLast(1), color = ink, fontSize = 9.sp, lineHeight = 9.sp)
+            Box(Modifier.fillMaxSize().border(0.5.dp, Color(0xFFE6E0D4), RoundedCornerShape(4.dp)).padding(2.dp)) {
+                Column(Modifier.align(Alignment.TopStart), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(card.label.dropLast(1), color = ink, fontSize = 11.sp, fontWeight = FontWeight.Black, lineHeight = 11.sp)
+                    Text(card.label.takeLast(1), color = ink, fontSize = 10.sp, lineHeight = 10.sp)
                 }
-                Text(card.label.takeLast(1), Modifier.align(Alignment.CenterHorizontally), color = ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Column(Modifier.align(Alignment.End), horizontalAlignment = Alignment.End) {
-                    Text(card.label.takeLast(1), color = ink, fontSize = 9.sp, lineHeight = 9.sp)
-                    Text(card.label.dropLast(1), color = ink, fontSize = 10.sp, fontWeight = FontWeight.Black, lineHeight = 10.sp)
+                Column(Modifier.align(Alignment.BottomEnd), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(card.label.takeLast(1), color = ink, fontSize = 10.sp, lineHeight = 10.sp)
+                    Text(card.label.dropLast(1), color = ink, fontSize = 11.sp, fontWeight = FontWeight.Black, lineHeight = 11.sp)
+                }
+                val rank = card.rank
+                if (rank in 2..10) {
+                    val rows = when (rank) {
+                        2 -> listOf(1, 1); 3 -> listOf(1, 1, 1); 4 -> listOf(2, 2); 5 -> listOf(2, 1, 2)
+                        6 -> listOf(2, 2, 2); 7 -> listOf(2, 1, 2, 2); 8 -> listOf(2, 2, 2, 2)
+                        9 -> listOf(2, 2, 1, 2, 2); else -> listOf(2, 2, 2, 2, 2)
+                    }
+                    Column(Modifier.align(Alignment.Center).fillMaxHeight(0.78f), verticalArrangement = Arrangement.SpaceEvenly) {
+                        rows.forEach { count ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                repeat(count) { Text(card.label.takeLast(1), color = ink, fontSize = 11.sp, lineHeight = 11.sp) }
+                            }
+                        }
+                    }
+                } else {
+                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(card.label.takeLast(1), color = ink, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                        Text(when (rank) { 1 -> "ACE"; 11 -> "JACK"; 12 -> "QUEEN"; else -> "KING" },
+                            color = ink, fontSize = 5.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                    }
                 }
             }
         } else Text(emptySuit ?: "♧", color = Color(0xFFB5D4C3), fontSize = 22.sp)
@@ -882,6 +918,11 @@ private fun SolitaireScreen(
     var selectedTableau by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var selectedFoundation by remember { mutableIntStateOf(-1) }
     var message by remember { mutableStateOf("Tap the stock to deal. Select a card, then its destination.") }
+    val dropBounds = remember { mutableStateMapOf<String, Rect>() }
+    var dragOrigin by remember { mutableStateOf(Offset.Zero) }
+    var dragPoint by remember { mutableStateOf(Offset.Zero) }
+    var dragSource by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var dragWaste by remember { mutableStateOf(false) }
 
     fun commit(next: KlondikeState?) {
         if (next == null) {
@@ -896,6 +937,46 @@ private fun SolitaireScreen(
             message = if (next.isWon) "You won! All four foundations are complete." else "Good move."
         }
     }
+
+    fun finishDrag() {
+        val point = dragPoint
+        val foundation = (0..3).firstOrNull { dropBounds["foundation:$it"]?.contains(point) == true }
+        val column = (0..6).firstOrNull { dropBounds["column:$it"]?.contains(point) == true }
+        when {
+            foundation != null -> {
+                if (dragWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
+                else dragSource?.let { (source, index) ->
+                    if (index == game.tableau[source].lastIndex) commit(KlondikeEngine.moveTableauToFoundation(game, source))
+                    else message = "Only the top tableau card can move to a foundation."
+                }
+            }
+            column != null -> {
+                if (dragWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
+                else dragSource?.let { (source, index) -> commit(KlondikeEngine.moveTableauRun(game, source, index, column)) }
+            }
+            else -> message = "Drop the card on a tableau column or foundation."
+        }
+        dragSource = null
+        dragWaste = false
+    }
+
+    fun cardDragModifier(source: Pair<Int, Int>? = null, waste: Boolean = false): Modifier =
+        Modifier.onGloballyPositioned { dragOrigin = it.positionInRoot() }
+            .pointerInput(source, waste, game) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        dragSource = source
+                        dragWaste = waste
+                        dragPoint = dragOrigin + offset
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        dragPoint += amount
+                    },
+                    onDragEnd = { finishDrag() },
+                    onDragCancel = { dragSource = null; dragWaste = false }
+                )
+            }
 
     Column(Modifier.fillMaxSize().background(Felt).padding(10.dp)) {
         GameHeader("Klondike Solitaire", onBack, "Score: ${game.score}   Moves: ${game.moves}")
@@ -939,7 +1020,7 @@ private fun SolitaireScreen(
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("WASTE", color = Color.White, fontSize = 9.sp)
-                Box(Modifier.width(48.dp).clickable {
+                Box(Modifier.width(48.dp).then(cardDragModifier(waste = true)).clickable {
                     if (game.waste.isNotEmpty()) {
                         selectedWaste = true; selectedTableau = null; selectedFoundation = -1
                         message = "Waste card selected. Tap a tableau column or foundation."
@@ -950,7 +1031,7 @@ private fun SolitaireScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("FOUND.", color = Color.White, fontSize = 8.sp)
                     val top = pile.lastOrNull()
-                    Box(Modifier.width(43.dp).clickable {
+                    Box(Modifier.width(43.dp).onGloballyPositioned { dropBounds["foundation:$suit"] = it.boundsInRoot() }.clickable {
                         if (selectedWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
                         else if (selectedTableau != null && selectedTableau!!.second == game.tableau[selectedTableau!!.first].lastIndex) {
                             commit(KlondikeEngine.moveTableauToFoundation(game, selectedTableau!!.first))
@@ -965,7 +1046,7 @@ private fun SolitaireScreen(
         Text(message, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 9.dp))
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             game.tableau.forEachIndexed { column, pile ->
-                Column(Modifier.weight(1f).fillMaxHeight().background(Color(0xFF1B7652), RoundedCornerShape(5.dp)).clickable {
+                Column(Modifier.weight(1f).fillMaxHeight().onGloballyPositioned { dropBounds["column:$column"] = it.boundsInRoot() }.background(Color(0xFF1B7652), RoundedCornerShape(5.dp)).clickable {
                     if (selectedFoundation >= 0) {
                         commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
                     } else if (selectedWaste) {
@@ -986,7 +1067,7 @@ private fun SolitaireScreen(
                 }.padding(2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF0E4B37), RoundedCornerShape(4.dp)).padding(vertical = 10.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
                     pile.forEachIndexed { index, card ->
-                        Box(Modifier.fillMaxWidth().clickable {
+                        Box(Modifier.fillMaxWidth().then(if (card.faceUp) cardDragModifier(column to index) else Modifier).clickable {
                             if (card.faceUp) {
                                 if (selectedFoundation >= 0) commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
                                 else if (selectedWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
