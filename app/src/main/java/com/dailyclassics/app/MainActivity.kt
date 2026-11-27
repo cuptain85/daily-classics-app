@@ -565,6 +565,8 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
     var date by remember { mutableStateOf(initialDate) }
     val puzzle = remember(date) { CrosswordPuzzleGenerator.forDate(date.toString()) }
     val entries = puzzle.entries
+    val acrossEntries = remember(puzzle) { entries.filter { it.across } }
+    val downEntries = remember(puzzle) { entries.filter { !it.across } }
     val blocked = remember(puzzle) { puzzle.blankGrid.map { it == '#' } }
     val savedKey = "crossword_" + date.toString()
     val cells = remember(puzzle) {
@@ -580,12 +582,21 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
     var keyboardText by remember { mutableStateOf("") }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-    val clueListState = rememberLazyListState()
+    val acrossState = rememberLazyListState()
+    val downState = rememberLazyListState()
     val active = entries[activeIndex]
     val completed = entries.count { entry -> entry.cells.all { cells[it] == puzzle.solutionGrid[it] } }
     val cellNumbers = remember(puzzle) { entries.groupBy { it.cells.first() }.mapValues { (_, atCell) -> atCell.minOf { entry -> entry.number } } }
+    val activeCells = remember(activeIndex, puzzle) { entries[activeIndex].cells.toSet() }
 
-    LaunchedEffect(activeIndex) { clueListState.animateScrollToItem(activeIndex) }
+    LaunchedEffect(activeIndex) {
+        val listIndex = if (active.across) acrossEntries.indexOf(active) else downEntries.indexOf(active)
+        if (listIndex >= 0) {
+            if (active.across) acrossState.animateScrollToItem(listIndex)
+            else downState.animateScrollToItem(listIndex)
+        }
+    }
+
     fun save() { prefs.edit().putString(savedKey, cells.joinToString("")).apply() }
     fun enterLetter(letter: Char) {
         if (blocked[selectedCell] || !letter.isLetter()) return
@@ -610,38 +621,93 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
         keyboard?.show()
     }
 
-    Column(Modifier.fillMaxSize().background(Color.White).padding(horizontal = 10.dp, vertical = 6.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("‹", Modifier.clickable { onBack() }.padding(end = 12.dp), color = Color.Black, fontSize = 30.sp)
-            Column(Modifier.weight(1f)) {
-                Text("CROSSWORD", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Text(date.toString(), color = Color.DarkGray, fontSize = 11.sp)
+    val navy = Color(0xFF123F79)
+    val royalBlue = Color(0xFF1769C8)
+    val paper = Color(0xFFFFFDF6)
+    val ink = Color(0xFF171B22)
+
+    Column(Modifier.fillMaxSize().background(Color(0xFFF4EFDF)).padding(horizontal = 10.dp, vertical = 5.dp)) {
+        Row(
+            Modifier.fillMaxWidth().height(42.dp)
+                .background(navy, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("‹", Modifier.clickable { onBack() }.padding(end = 14.dp), color = Color.White, fontSize = 30.sp)
+            Text(
+                "Daily Classics",
+                Modifier.weight(1f),
+                color = Color.White,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                textAlign = TextAlign.Center
+            )
+            Text("✦", color = Color(0xFFFFD56A), fontSize = 18.sp)
+        }
+
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("CROSSWORD", Modifier.weight(1f), color = navy, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(date.toString(), color = navy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("DAILY PUZZLE", color = Color(0xFF6D7783), fontSize = 8.sp, letterSpacing = 1.1.sp)
             }
-            Text("${completed}/${entries.size}", color = Color.Black, fontSize = 12.sp)
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { date = date.minusDays(1) }) { Text("‹ Previous", color = Color.Black) }
-            TextButton(onClick = { date = date.plusDays(1) }) { Text("Next ›", color = Color.Black) }
+
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 7.dp)
+                .background(Color(0xFFDCEBFA), RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF78B6EC), RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Completed  $completed / ${entries.size}", color = navy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(if (active.across) "ACROSS  •  ${active.number}" else "DOWN  •  ${active.number}", color = royalBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(Color.Black).padding(1.dp)) {
+
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(1f)
+                .background(Color(0xFF111111), RoundedCornerShape(2.dp))
+                .border(1.5.dp, Color(0xFF111111), RoundedCornerShape(2.dp))
+                .padding(1.dp)
+        ) {
             Column(Modifier.fillMaxSize()) {
                 for (row in 0 until 13) {
                     Row(Modifier.weight(1f)) {
                         for (col in 0 until 13) {
                             val cell = row * 13 + col
                             val isBlock = blocked[cell]
+                            val isSelected = cell == selectedCell
+                            val inWord = cell in activeCells
                             Box(
-                                Modifier.weight(1f).fillMaxHeight().padding(0.35.dp)
-                                    .background(if (isBlock) Color.Black else if (cell == selectedCell) Color(0xFFE8E8E8) else Color.White)
+                                Modifier.weight(1f).fillMaxHeight()
+                                    .padding(0.35.dp)
+                                    .background(
+                                        when {
+                                            isBlock -> Color(0xFF17191D)
+                                            isSelected -> Color(0xFFFFD96A)
+                                            inWord -> Color(0xFFD9E9FA)
+                                            else -> Color.White
+                                        }
+                                    )
                                     .clickable(enabled = !isBlock) { selectCell(cell) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (!isBlock) {
                                     val letter = cells[cell].takeIf { it != '.' && it != '#' }?.toString() ?: ""
-                                    Text(letter, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                    Text(letter, color = ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                     cellNumbers[cell]?.let { number ->
-                                        Text(number.toString(), Modifier.align(Alignment.TopStart).padding(start = 1.dp),
-                                            color = Color.Black, fontSize = 6.sp, lineHeight = 7.sp)
+                                        Text(
+                                            number.toString(),
+                                            Modifier.align(Alignment.TopStart).padding(start = 1.dp, top = 0.dp),
+                                            color = Color(0xFF252A31),
+                                            fontSize = 6.sp,
+                                            lineHeight = 6.sp
+                                        )
                                     }
                                 }
                             }
@@ -650,25 +716,78 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
                 }
             }
         }
-        Text("CLUES", Modifier.padding(top = 7.dp, bottom = 3.dp), color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        LazyColumn(state = clueListState, modifier = Modifier.weight(1f)) {
-            item { Text("ACROSS", Modifier.fillMaxWidth().background(Color(0xFFEDEDED)).padding(6.dp), color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            items(entries.filter { it.across }) { entry ->
-                val index = entries.indexOf(entry)
-                Text("${entry.number}.  ${entry.clue}",
-                    Modifier.fillMaxWidth().clickable { activeIndex = index; selectedCell = entry.cells.first(); lastTappedCell = -1; focusRequester.requestFocus(); keyboard?.show() }
-                        .background(if (index == activeIndex) Color(0xFFF0F0F0) else Color.White).padding(horizontal = 7.dp, vertical = 5.dp),
-                    color = Color.Black, fontSize = 12.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal)
+
+        Row(
+            Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Column(
+                Modifier.weight(1f).fillMaxHeight()
+                    .background(paper, RoundedCornerShape(8.dp))
+                    .border(1.5.dp, royalBlue, RoundedCornerShape(8.dp))
+            ) {
+                Text(
+                    "ACROSS",
+                    Modifier.fillMaxWidth().background(navy, RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp)).padding(horizontal = 9.dp, vertical = 6.dp),
+                    color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp
+                )
+                LazyColumn(state = acrossState, modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                    items(acrossEntries, key = { "a${it.number}" }) { entry ->
+                        val index = entries.indexOf(entry)
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .background(if (index == activeIndex) Color(0xFFDCEBFA) else paper, RoundedCornerShape(4.dp))
+                                .clickable {
+                                    activeIndex = index
+                                    selectedCell = entry.cells.first()
+                                    lastTappedCell = -1
+                                    focusRequester.requestFocus()
+                                    keyboard?.show()
+                                }
+                                .padding(horizontal = 5.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text("${entry.number}.", Modifier.width(25.dp), color = navy, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(entry.clue, color = ink, fontSize = 11.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal, lineHeight = 14.sp)
+                        }
+                    }
+                }
             }
-            item { Text("DOWN", Modifier.fillMaxWidth().background(Color(0xFFEDEDED)).padding(6.dp), color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            items(entries.filter { !it.across }) { entry ->
-                val index = entries.indexOf(entry)
-                Text("${entry.number}.  ${entry.clue}",
-                    Modifier.fillMaxWidth().clickable { activeIndex = index; selectedCell = entry.cells.first(); lastTappedCell = -1; focusRequester.requestFocus(); keyboard?.show() }
-                        .background(if (index == activeIndex) Color(0xFFF0F0F0) else Color.White).padding(horizontal = 7.dp, vertical = 5.dp),
-                    color = Color.Black, fontSize = 12.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal)
+
+            Column(
+                Modifier.weight(1f).fillMaxHeight()
+                    .background(paper, RoundedCornerShape(8.dp))
+                    .border(1.5.dp, royalBlue, RoundedCornerShape(8.dp))
+            ) {
+                Text(
+                    "DOWN",
+                    Modifier.fillMaxWidth().background(navy, RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp)).padding(horizontal = 9.dp, vertical = 6.dp),
+                    color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp
+                )
+                LazyColumn(state = downState, modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                    items(downEntries, key = { "d${it.number}" }) { entry ->
+                        val index = entries.indexOf(entry)
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .background(if (index == activeIndex) Color(0xFFDCEBFA) else paper, RoundedCornerShape(4.dp))
+                                .clickable {
+                                    activeIndex = index
+                                    selectedCell = entry.cells.first()
+                                    lastTappedCell = -1
+                                    focusRequester.requestFocus()
+                                    keyboard?.show()
+                                }
+                                .padding(horizontal = 5.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text("${entry.number}.", Modifier.width(25.dp), color = navy, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(entry.clue, color = ink, fontSize = 11.sp, fontWeight = if (index == activeIndex) FontWeight.Bold else FontWeight.Normal, lineHeight = 14.sp)
+                        }
+                    }
+                }
             }
         }
+
         BasicTextField(
             value = keyboardText,
             onValueChange = { value ->
@@ -680,15 +799,34 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
             singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(color = Color.Transparent)
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Selected: ${active.number} ${if (active.across) "Across" else "Down"}", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            TextButton(onClick = { if (!blocked[selectedCell]) { cells[selectedCell] = '.'; save() } }) { Text("Erase", color = Color.Black) }
-            TextButton(onClick = {
-                val correct = entries.all { entry -> entry.cells.map { cells[it] }.joinToString("") == entry.answer }
-                message = if (correct) "Puzzle complete." else "Keep solving."
-            }) { Text("Check", color = Color.Black) }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = {
+                    if (!blocked[selectedCell]) {
+                        cells[selectedCell] = '.'
+                        save()
+                        message = "Square cleared."
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = navy),
+                border = androidx.compose.foundation.BorderStroke(1.dp, royalBlue),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 7.dp)
+            ) { Text("Erase", fontWeight = FontWeight.Bold) }
+            Button(
+                onClick = {
+                    val correct = entries.all { entry -> entry.cells.map { cells[it] }.joinToString("") == entry.answer }
+                    message = if (correct) "Puzzle complete." else "Not quite finished. Keep solving!"
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = navy),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 7.dp)
+            ) { Text("Check puzzle", color = Color.White, fontWeight = FontWeight.Bold) }
         }
-        if (message.isNotEmpty()) Text(message, color = Color.DarkGray, fontSize = 11.sp)
+        if (message.isNotEmpty()) {
+            Text(message, Modifier.fillMaxWidth().padding(top = 3.dp), color = navy, fontSize = 10.sp, textAlign = TextAlign.Center)
+        }
     }
 }
 
