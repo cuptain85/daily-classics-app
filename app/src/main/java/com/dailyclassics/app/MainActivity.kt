@@ -1030,56 +1030,23 @@ private fun SolitaireScreen(
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("WASTE", color = Color.White, fontSize = 9.sp)
-                Box(Modifier.width(48.dp).then(cardDragModifier(waste = true)) {
-                    if (game.waste.isNotEmpty()) {
-                        selectedWaste = true; selectedTableau = null; selectedFoundation = -1
-                        message = "Waste card selected. Tap a tableau column or foundation."
-                    }
-                }) { RealPlayingCard(game.waste.lastOrNull(), Modifier.fillMaxWidth(), selected = selectedWaste) }
+                Box(Modifier.width(48.dp).then(cardDragModifier(waste = true))) { RealPlayingCard(game.waste.lastOrNull(), Modifier.fillMaxWidth(), selected = selectedWaste) }
             }
             game.foundations.forEachIndexed { suit, pile ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("FOUND.", color = Color.White, fontSize = 8.sp)
                     val top = pile.lastOrNull()
-                    Box(Modifier.width(43.dp).then(if (top != null) cardDragModifier(foundationSuit = suit) else Modifier).onGloballyPositioned { dropBounds["foundation:$suit"] = it.boundsInRoot() } {
-                        if (selectedWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
-                        else if (selectedTableau != null && selectedTableau!!.second == game.tableau[selectedTableau!!.first].lastIndex) {
-                            commit(KlondikeEngine.moveTableauToFoundation(game, selectedTableau!!.first))
-                        } else if (selectedTableau == null) {
-                            selectedFoundation = suit; selectedWaste = false
-                            message = "Foundation selected. Tap a tableau column to move its top card back."
-                        } else message = "Only a tableau top card can move to a foundation."
-                    }) { RealPlayingCard(top, Modifier.fillMaxWidth(), selected = selectedFoundation == suit, emptySuit = listOf("♣", "♦", "♥", "♠")[suit]) }
+                    Box(Modifier.width(43.dp).then(if (top != null) cardDragModifier(foundationSuit = suit) else Modifier).onGloballyPositioned { dropBounds["foundation:$suit"] = it.boundsInRoot() }) { RealPlayingCard(top, Modifier.fillMaxWidth(), selected = selectedFoundation == suit, emptySuit = listOf("♣", "♦", "♥", "♠")[suit]) }
                 }
             }
         }
         Text(message, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 9.dp))
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             game.tableau.forEachIndexed { column, pile ->
-                Column(Modifier.weight(1f).fillMaxHeight().onGloballyPositioned { dropBounds["column:$column"] = it.boundsInRoot() }.background(Color(0xFF1B7652), RoundedCornerShape(5.dp))
-                    if (selectedFoundation >= 0) {
-                        commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
-                    } else if (selectedWaste) {
-                        commit(KlondikeEngine.moveWasteToTableau(game, column))
-                    } else if (selectedTableau != null) {
-                        val source = selectedTableau!!
-                        if (source.first == column) {
-                            selectedTableau = null
-                            message = "Selection cleared."
-                        } else commit(KlondikeEngine.moveTableauRun(game, source.first, source.second, column))
-                    } else {
-                        val top = pile.lastIndex
-                        if (top >= 0 && pile[top].faceUp) {
-                            selectedTableau = column to top
-                            message = "Selected ${pile[top].label}. Tap another column or its foundation."
-                        }
-                    }
-                }.padding(2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(Modifier.weight(1f).fillMaxHeight().onGloballyPositioned { dropBounds["column:$column"] = it.boundsInRoot() }.background(Color(0xFF1B7652), RoundedCornerShape(5.dp)).padding(2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF0E4B37), RoundedCornerShape(4.dp)).padding(vertical = 10.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
                     pile.forEachIndexed { index, card ->
-                        Box(Modifier.fillMaxWidth().then(if (card.faceUp) cardDragModifier(column to index) else Modifier)) {
-                            RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth().height(if (card.faceUp) 54.dp else 18.dp), faceDown = !card.faceUp)
-                        }
+                        Box(Modifier.fillMaxWidth().then(if (card.faceUp) cardDragModifier(column to index) else Modifier)) { RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth().height(if (card.faceUp) 54.dp else 18.dp), faceDown = !card.faceUp, selected = selectedTableau == (column to index)) }
                     }
                 }
             }
