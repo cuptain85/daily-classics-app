@@ -207,7 +207,7 @@ private fun Home(onGame: (String) -> Unit) {
                             onClick = { onGame(gameName) },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = colors.first),
+                            colors = CardDefaults.cardColors(containerColor = colors[0]),
                             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                         ) {
                             Box(
