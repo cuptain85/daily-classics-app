@@ -1334,7 +1334,7 @@ private fun SpadesScreen(onBack: () -> Unit) {
                 border = androidx.compose.foundation.BorderStroke(1.dp, gold),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Column(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Column {
                         Text("YOUR HAND  •  13 CARDS", color = gold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text("Dealer: ${names[dealer]}     •     You bid after ${names[dealer]}", color = Color(0xFFD6DFE7), fontSize = 10.sp)
