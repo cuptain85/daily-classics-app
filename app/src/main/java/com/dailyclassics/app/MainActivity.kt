@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.random.Random
 import java.time.LocalDate
+import java.time.YearMonth
 
 private val Blue = Color(0xFF1769D2)
 private val DeepBlue = Color(0xFF104A9B)
@@ -61,6 +63,82 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameCalendarScreen(
+    game: String,
+    onBack: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit
+) {
+    var month by remember { mutableStateOf(YearMonth.now()) }
+    val today = LocalDate.now()
+    val firstOffset = month.atDay(1).dayOfWeek.value % 7
+    val days = month.lengthOfMonth()
+    Column(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF19AEEF), Color(0xFFB8EEFF), Color(0xFFB6ED75)))
+        ).padding(16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("‹", Modifier.clickable { onBack() }.padding(end = 16.dp), color = DeepBlue, fontSize = 36.sp)
+            Column {
+                Text(game, color = DeepBlue, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Choose a day to play", color = Ink, fontSize = 14.sp)
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.padding(14.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("‹", Modifier.clickable { month = month.minusMonths(1) }.padding(10.dp), color = DeepBlue, fontSize = 30.sp)
+                    Text(month.month.name.lowercase().replaceFirstChar { it.uppercase() } + " " + month.year, color = DeepBlue, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("›", Modifier.clickable { month = month.plusMonths(1) }.padding(10.dp), color = if (month < YearMonth.from(today).plusMonths(1)) DeepBlue else Color.LightGray, fontSize = 30.sp)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    listOf("S", "M", "T", "W", "T", "F", "S").forEach {
+                        Text(it, Modifier.weight(1f), color = Color.Gray, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                    }
+                }
+                repeat(6) { week ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        repeat(7) { weekday ->
+                            val day = week * 7 + weekday - firstOffset + 1
+                            val valid = day in 1..days
+                            val date = if (valid) month.atDay(day) else null
+                            val available = date != null && !date.isAfter(today)
+                            Box(
+                                Modifier.weight(1f).aspectRatio(1f)
+                                    .padding(2.dp)
+                                    .background(
+                                        when {
+                                            date == today -> Color(0xFF1769D2)
+                                            available -> Color(0xFFE4F4DC)
+                                            else -> Color(0xFFF3F5F7)
+                                        },
+                                        RoundedCornerShape(10.dp)
+                                    )
+                                    .then(if (available) Modifier.clickable { onDateSelected(date!!) } else Modifier),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (valid) Text(
+                                    day.toString(),
+                                    color = when {
+                                        date == today -> Color.White
+                                        available -> Color(0xFF24652D)
+                                        else -> Color.LightGray
+                                    },
+                                    fontWeight = if (date == today) FontWeight.ExtraBold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Select any date up to today. Future dates aren't available yet.", color = Color.Gray, fontSize = 11.sp)
             }
         }
     }
@@ -265,7 +343,19 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
         }
         Text(message, color = Ink, fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
-        Column(Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(2.dp)) {
+        Column(
+            Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(2.dp)
+                .drawWithContent {
+                    drawContent()
+                    val line = 3.dp.toPx()
+                    for (i in 1..2) {
+                        val x = size.width * i / 3f
+                        val y = size.height * i / 3f
+                        drawLine(DeepBlue, androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), line)
+                        drawLine(DeepBlue, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y), line)
+                    }
+                }
+        ) {
             for (r in 0..8) {
                 Row(Modifier.weight(1f)) {
                     for (c in 0..8) {
