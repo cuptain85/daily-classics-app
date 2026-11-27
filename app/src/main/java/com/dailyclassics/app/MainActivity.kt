@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
@@ -483,7 +484,7 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
     val clueListState = rememberLazyListState()
     val active = entries[activeIndex]
     val completed = entries.count { entry -> entry.cells.all { cells[it] == puzzle.solutionGrid[it] } }
-    val cellNumbers = remember(puzzle) { entries.groupBy { it.cells.first() }.mapValues { (_, atCell) -> it.value.minOf { entry -> entry.number } } }
+    val cellNumbers = remember(puzzle) { entries.groupBy { it.cells.first() }.mapValues { (_, atCell) -> atCell.minOf { entry -> entry.number } } }
 
     LaunchedEffect(activeIndex) { clueListState.animateScrollToItem(activeIndex) }
     fun save() { prefs.edit().putString(savedKey, cells.joinToString("")).apply() }
@@ -599,8 +600,8 @@ private data class PlayingCard(val rank: Int, val suit: Int, val faceUp: Boolean
 }
 
 @Composable
-private fun RealPlayingCard(card: PlayingCard?, modifier: Modifier = Modifier, faceDown: Boolean = false, selected: Boolean = false, emptySuit: String? = null) {
-    val ink = if (card?.red == true) Color(0xFFC52232) else Color(0xFF171717)
+private fun RealPlayingCard(card: KlondikeCard?, modifier: Modifier = Modifier, faceDown: Boolean = false, selected: Boolean = false, emptySuit: String? = null) {
+    val ink = if (card?.isRed == true) Color(0xFFC52232) else Color(0xFF171717)
     Box(modifier.aspectRatio(0.70f)
         .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFFFFD56A) else Color(0xFF202020), RoundedCornerShape(5.dp))
         .background(if (faceDown) Color(0xFF173B69) else if (card != null) Color(0xFFFFFEFA) else Color(0xFF0D573D), RoundedCornerShape(5.dp))
