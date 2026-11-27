@@ -712,17 +712,15 @@ private fun SolitaireScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("FOUND.", color = Color.White, fontSize = 8.sp)
                     val top = pile.lastOrNull()
-                    Text(top?.label ?: listOf("♣", "♦", "♥", "♠")[suit],
-                        Modifier.background(if (selectedFoundation == suit) Color(0xFFFFE39B) else Color(0xFF0E4B37), RoundedCornerShape(7.dp)).clickable {
-                            if (selectedWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
-                            else if (selectedTableau != null && selectedTableau!!.second == game.tableau[selectedTableau!!.first].lastIndex) {
-                                commit(KlondikeEngine.moveTableauToFoundation(game, selectedTableau!!.first))
-                            } else if (selectedTableau == null) {
-                                selectedFoundation = suit; selectedWaste = false
-                                message = "Foundation selected. Tap a tableau column to move its top card back."
-                            } else message = "Only a tableau top card can move to a foundation."
-                        }.padding(horizontal = 9.dp, vertical = 14.dp),
-                        color = if (top?.isRed == true) Color(0xFFFFB4B4) else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Box(Modifier.width(43.dp).clickable {
+                        if (selectedWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
+                        else if (selectedTableau != null && selectedTableau!!.second == game.tableau[selectedTableau!!.first].lastIndex) {
+                            commit(KlondikeEngine.moveTableauToFoundation(game, selectedTableau!!.first))
+                        } else if (selectedTableau == null) {
+                            selectedFoundation = suit; selectedWaste = false
+                            message = "Foundation selected. Tap a tableau column to move its top card back."
+                        } else message = "Only a tableau top card can move to a foundation."
+                    }) { RealPlayingCard(top, Modifier.fillMaxWidth(), selected = selectedFoundation == suit, emptySuit = listOf("♣", "♦", "♥", "♠")[suit]) }
                 }
             }
         }
