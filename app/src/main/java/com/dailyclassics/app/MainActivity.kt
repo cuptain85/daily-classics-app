@@ -615,11 +615,11 @@ private fun RealPlayingCard(card: KlondikeCard?, modifier: Modifier = Modifier, 
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text(card.label.dropLast(1), color = ink, fontSize = 10.sp, fontWeight = FontWeight.Black, lineHeight = 10.sp)
-                    Text(card.symbol, color = ink, fontSize = 9.sp, lineHeight = 9.sp)
+                    Text(card.label.takeLast(1), color = ink, fontSize = 9.sp, lineHeight = 9.sp)
                 }
-                Text(card.symbol, Modifier.align(Alignment.CenterHorizontally), color = ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(card.label.takeLast(1), Modifier.align(Alignment.CenterHorizontally), color = ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Column(Modifier.align(Alignment.End), horizontalAlignment = Alignment.End) {
-                    Text(card.symbol, color = ink, fontSize = 9.sp, lineHeight = 9.sp)
+                    Text(card.label.takeLast(1), color = ink, fontSize = 9.sp, lineHeight = 9.sp)
                     Text(card.label.dropLast(1), color = ink, fontSize = 10.sp, fontWeight = FontWeight.Black, lineHeight = 10.sp)
                 }
             }
