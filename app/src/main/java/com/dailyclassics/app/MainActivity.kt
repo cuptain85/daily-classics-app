@@ -394,7 +394,7 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
     val redo = remember(date) { mutableStateListOf<Pair<String, Map<Int, String>>>() }
     var selected by remember(date) { mutableIntStateOf(0) }
     var notesMode by remember { mutableStateOf(false) }
-    var message by remember(date) { mutableStateOf("Fill each row, column and 3×3 box with 1–9.") }
+    var message by remember(date) { mutableStateOf("") }
 
     fun snapshot(): Pair<String, Map<Int, String>> = cells.joinToString("") to notes.toMap()
     fun rememberChange() {
@@ -422,8 +422,7 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
             Text(if (date == LocalDate.now()) "Today" else date.toString(), color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             OutlinedButton(onClick = { date = date.plusDays(1) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) { Text("Next ›") }
         }
-        Text(message, color = Ink, fontSize = 12.sp)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         Column(
             Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(2.dp)
                 .drawWithContent {
@@ -465,12 +464,30 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                                 .clickable { selected = i },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                if (cells[i] != '0') cells[i].toString() else notes[i].orEmpty(),
-                                color = if (fixed) DeepBlue else if (conflict) Color.Red else Ink,
-                                fontSize = if (notes[i] != null && cells[i] == '0') 8.sp else 18.sp,
-                                fontWeight = if (fixed) FontWeight.Bold else FontWeight.Normal
-                            )
+                            if (cells[i] != '0') {
+                                Text(
+                                    cells[i].toString(),
+                                    color = if (fixed) DeepBlue else if (conflict) Color.Red else Ink,
+                                    fontSize = 18.sp,
+                                    fontWeight = if (fixed) FontWeight.Bold else FontWeight.Normal
+                                )
+                            } else {
+                                val cellNotes = notes[i].orEmpty()
+                                Column(Modifier.fillMaxSize().padding(1.dp)) {
+                                    for (noteRow in 0..2) {
+                                        Row(Modifier.weight(1f)) {
+                                            for (noteCol in 1..3) {
+                                                val note = (noteRow * 3 + noteCol).toString()
+                                                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                                                    if (note in cellNotes) {
+                                                        Text(note, color = Ink, fontSize = 7.sp, lineHeight = 8.sp, textAlign = TextAlign.Center)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -510,29 +527,41 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                 } else message = "Nothing to redo."
             }, modifier = Modifier.weight(1f)) { Text("Redo") }
         }
+        val completedDigits = (1..9).filter { digit ->
+            cells.indices.count { index -> cells[index] == ('0'.code + digit).toChar() && solution[index] == ('0'.code + digit).toChar() } == 9
+        }.toSet()
+        Spacer(Modifier.height(10.dp))
         for (row in 0..2) {
-            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().height(52.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (col in 1..3) {
                     val n = row * 3 + col
-                    Button(onClick = {
-                        if (puzzle[selected] == '0') {
-                            rememberChange()
-                            if (notesMode) {
-                                val digit = ('0'.code + n).toChar()
-                                val current = notes[selected].orEmpty()
-                                val updated = if (digit in current) current.filterNot { it == digit } else current + digit
-                                if (updated.isEmpty()) notes.remove(selected) else notes[selected] = updated
-                            } else {
-                                cells[selected] = ('0'.code + n).toChar()
-                                notes.remove(selected)
+                    val completed = n in completedDigits
+                    Button(
+                        onClick = {
+                            if (!completed && puzzle[selected] == '0') {
+                                rememberChange()
+                                if (notesMode) {
+                                    val digit = ('0'.code + n).toChar()
+                                    val current = notes[selected].orEmpty()
+                                    val updated = if (digit in current) current.filterNot { it == digit } else current + digit
+                                    if (updated.isEmpty()) notes.remove(selected) else notes[selected] = updated
+                                } else {
+                                    cells[selected] = ('0'.code + n).toChar()
+                                    notes.remove(selected)
+                                }
+                                persist()
                             }
-                            persist()
-                        }
-                    }, modifier = Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(0.dp)) { Text(n.toString(), fontSize = 19.sp) }
+                        },
+                        enabled = !completed && puzzle[selected] == '0',
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text(n.toString(), fontSize = 21.sp) }
                 }
             }
         }
-        Text("Selected square: row ${selected / 9 + 1}, column ${selected % 9 + 1}", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+        if (message.isNotEmpty()) {
+            Text(message, color = Ink, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+        }
     }
 }
 
