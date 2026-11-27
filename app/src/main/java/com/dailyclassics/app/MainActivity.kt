@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                 var drawThree by remember { mutableStateOf(prefs.getBoolean("draw3", false)) }
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Pale) {
                     when (page) {
-                        "Home" -> Home(onGame = { selectedGame = it; page = "Calendar" })
+                        "Home" -> Home(onGame = { selectedGame = it; page = if (it == "Sudoku" || it == "Crossword") "Calendar" else it })
                         "Calendar" -> GameCalendarScreen(game = selectedGame, onBack = { page = "Home" }, onDateSelected = { selectedDate = it; page = selectedGame })
                         "Sudoku" -> SudokuScreen(onBack = { page = "Home" }, prefs = prefs, initialDate = selectedDate)
                         "Crossword" -> CrosswordScreen(onBack = { page = "Home" }, prefs = prefs, initialDate = selectedDate)
@@ -152,139 +152,214 @@ private fun GameCalendarScreen(
 
 @Composable
 private fun Home(onGame: (String) -> Unit) {
-    val sky = Color(0xFF35BDF5)
-    val meadow = Color(0xFF73D54B)
-    val tileData = listOf(
-        Triple("Sudoku", listOf(Color(0xFF28B8FF), Color(0xFF0755D8)), Color(0xFF073D9D)),
-        Triple("Crossword", listOf(Color(0xFF9BEA26), Color(0xFF198D32)), Color(0xFF17601F)),
-        Triple("Spades", listOf(Color(0xFFD94BFF), Color(0xFF7620C7)), Color(0xFF401078)),
-        Triple("Solitaire", listOf(Color(0xFFB7F33C), Color(0xFF239B37)), Color(0xFF176321))
-    )
     Column(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF19AEEF), Color(0xFFB8EEFF), Color(0xFFB6ED75), Color(0xFF55B83B)))
-        ).padding(horizontal = 12.dp, vertical = 8.dp)
+            Brush.verticalGradient(
+                listOf(Color(0xFF0876D5), Color(0xFF55C9F5), Color(0xFFBDEEFF), Color(0xFFB9E878), Color(0xFF58B844))
+            )
+        ).padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Column(
-            Modifier.fillMaxWidth().weight(0.28f),
+            Modifier.fillMaxWidth().weight(0.19f),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                "Daily",
-                color = Color.White,
-                fontSize = 43.sp,
+                "Daily Classics",
+                color = Color(0xFFFFF8E8),
+                fontSize = 39.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = (-1).sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                letterSpacing = (-1.2).sp,
                 style = androidx.compose.ui.text.TextStyle(
-                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF062B68), androidx.compose.ui.geometry.Offset(3f, 5f), 8f)
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        Color(0xFF063A78),
+                        androidx.compose.ui.geometry.Offset(2f, 4f),
+                        7f
+                    )
                 )
             )
             Text(
-                "Classics",
-                color = Color(0xFFFFD52E),
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-1.5).sp,
-                style = androidx.compose.ui.text.TextStyle(
-                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF092B67), androidx.compose.ui.geometry.Offset(3f, 6f), 9f)
-                )
-            )
-            Text(
-                "Play • Puzzle • Relax",
+                "Play  •  Puzzle  •  Relax",
                 color = Color.White,
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                 style = androidx.compose.ui.text.TextStyle(
-                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF123D83), androidx.compose.ui.geometry.Offset(1f, 3f), 5f)
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        Color(0xFF174E84),
+                        androidx.compose.ui.geometry.Offset(1f, 2f),
+                        4f
+                    )
                 )
             )
         }
-        Column(Modifier.fillMaxWidth().weight(0.58f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            tileData.chunked(2).forEachIndexed { rowIndex, row ->
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEachIndexed { columnIndex, item ->
-                        val gameName = item.first
-                        val colors = item.second
-                        Card(
-                            onClick = { onGame(gameName) },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = colors[0]),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                        ) {
-                            Box(
-                                Modifier.fillMaxSize().background(Brush.linearGradient(colors)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                when (gameName) {
-                                    "Sudoku" -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Column(Modifier.padding(bottom = 4.dp).background(Color.White, RoundedCornerShape(10.dp)).padding(5.dp)) {
-                                            listOf("5  3  8", "6  1  4", "2  7  9").forEach { line ->
-                                                Text(line, color = Color(0xFF174B9B), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                                            }
-                                        }
-                                    }
-                                    "Crossword" -> Column(Modifier.padding(bottom = 4.dp).background(Color.White, RoundedCornerShape(8.dp)).padding(4.dp)) {
-                                        listOf("■ □ ■ □", "□ ■ □ ■", "■ □ □ ■", "□ ■ □ □").forEach { line ->
-                                            Text(line, color = Color(0xFF183A35), fontSize = 23.sp, fontWeight = FontWeight.Black, lineHeight = 24.sp)
-                                        }
-                                    }
-                                    "Spades" -> FanCards(listOf("J♠", "Q♠", "K♠", "A♠"), red = false)
-                                    "Solitaire" -> FanCards(listOf("A♥", "2♥", "3♥", "4♥", "5♥"), red = true)
-                                }
-                                Text(
-                                    gameName,
-                                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                                        .background(Color(0xCC082B20), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                                        .padding(vertical = 8.dp),
-                                    color = Color.White,
-                                    fontSize = 23.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
+
+        Column(
+            Modifier.fillMaxWidth().weight(0.69f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GameTile("Sudoku", Color(0xFF0875E1), onClick = { onGame("Sudoku") }, modifier = Modifier.weight(1f)) {
+                    SudokuTileArt()
+                }
+                GameTile("Crossword", Color(0xFF258F38), onClick = { onGame("Crossword") }, modifier = Modifier.weight(1f)) {
+                    CrosswordTileArt()
+                }
+            }
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GameTile("Spades", Color(0xFF7624C8), onClick = { onGame("Spades") }, modifier = Modifier.weight(1f)) {
+                    DecorativeCards(listOf("J", "Q", "K", "A"), "♠", false)
+                }
+                GameTile("Solitaire", Color(0xFF399B35), onClick = { onGame("Solitaire") }, modifier = Modifier.weight(1f)) {
+                    DecorativeCards(listOf("A", "2", "3", "4", "5"), "♥", true)
                 }
             }
         }
+
         Row(
-            Modifier.fillMaxWidth().weight(0.14f).padding(top = 7.dp),
+            Modifier.fillMaxWidth().weight(0.12f).padding(top = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Text("🦆", fontSize = 43.sp)
+            Text("🌼   🌸   🌼", fontSize = 22.sp)
+            Text("🐰", fontSize = 43.sp)
+        }
+    }
+}
+
+@Composable
+private fun GameTile(
+    title: String,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    art: @Composable () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxHeight(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9ED)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 9.dp)
+    ) {
+        Column(
+            Modifier.fillMaxSize()
+                .border(3.dp, Color.White, RoundedCornerShape(24.dp))
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                title,
+                color = Color(0xFF102F5E),
+                fontSize = if (title == "Crossword" || title == "Solitaire") 22.sp else 25.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(5.dp))
             Box(
-                Modifier.weight(1f).fillMaxHeight().background(Color(0xFF159AD0), RoundedCornerShape(50)),
+                Modifier.fillMaxWidth().weight(1f)
+                    .background(
+                        Brush.verticalGradient(listOf(accent.copy(alpha = 0.16f), accent.copy(alpha = 0.07f))),
+                        RoundedCornerShape(15.dp)
+                    )
+                    .border(1.5.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(15.dp))
+                    .padding(5.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("🦆", fontSize = 58.sp)
-            }
-            Column(Modifier.weight(1.5f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🌼  🌸  🌼", fontSize = 20.sp)
-                Text("A New Challenge Every Day!", color = Color(0xFF174D24), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            }
-            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                Text("🐰", fontSize = 58.sp)
+                art()
             }
         }
     }
 }
 
 @Composable
-private fun FanCards(labels: List<String>, red: Boolean) {
-    Box(Modifier.fillMaxWidth().height(112.dp), contentAlignment = Alignment.Center) {
-        labels.forEachIndexed { index, label ->
-            Text(
-                label,
-                Modifier.offset(x = ((index - (labels.size - 1) / 2f) * 28).dp, y = (if (index % 2 == 0) 5 else (-5)).dp)
+private fun SudokuTileArt() {
+    val digits = listOf(
+        listOf("5", "3", "", "7"),
+        listOf("6", "", "1", "9"),
+        listOf("", "9", "8", ""),
+        listOf("8", "", "", "6")
+    )
+    Column(
+        Modifier.fillMaxHeight(0.94f).aspectRatio(0.92f)
+            .background(Color.White, RoundedCornerShape(7.dp))
+            .border(2.dp, Color(0xFF1D6FC4), RoundedCornerShape(7.dp))
+            .padding(3.dp)
+    ) {
+        digits.forEachIndexed { r, row ->
+            Row(Modifier.weight(1f)) {
+                row.forEachIndexed { col, value ->
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight()
+                            .border(
+                                width = if ((col + 1) % 2 == 0 || (r + 1) % 2 == 0) 1.dp else 0.5.dp,
+                                color = Color(0xFF8BA9C8)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(value, color = Color(0xFF123A70), fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CrosswordTileArt() {
+    val pattern = listOf(
+        listOf(1, 0, 0, 1, 0),
+        listOf(0, 0, 1, 0, 0),
+        listOf(1, 0, 0, 0, 1),
+        listOf(0, 1, 0, 0, 0),
+        listOf(0, 0, 1, 0, 1)
+    )
+    Column(
+        Modifier.fillMaxHeight(0.94f).aspectRatio(0.92f)
+            .background(Color(0xFF17202B), RoundedCornerShape(6.dp))
+            .border(2.dp, Color(0xFF4C9AC4), RoundedCornerShape(6.dp))
+            .padding(3.dp)
+    ) {
+        pattern.forEach { row ->
+            Row(Modifier.weight(1f)) {
+                row.forEach { open ->
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight()
+                            .padding(0.7.dp)
+                            .background(if (open == 1) Color(0xFF20252B) else Color(0xFFFFFEFA))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DecorativeCards(ranks: List<String>, suit: String, red: Boolean) {
+    Box(Modifier.fillMaxWidth().fillMaxHeight(0.92f), contentAlignment = Alignment.Center) {
+        ranks.forEachIndexed { index, rank ->
+            val color = if (red) Color(0xFFD82037) else Color(0xFF111820)
+            Column(
+                Modifier.offset(
+                    x = ((index - (ranks.size - 1) / 2f) * 25).dp,
+                    y = (if (index % 2 == 0) 5 else (-5)).dp
+                )
                     .zIndex(index.toFloat())
-                    .background(Color.White, RoundedCornerShape(9.dp))
-                    .padding(horizontal = 8.dp, vertical = 17.dp),
-                color = if (red) Color(0xFFD51F32) else Color(0xFF101820),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black
-            )
+                    .width(if (ranks.size == 5) 52.dp else 58.dp)
+                    .fillMaxHeight(0.82f)
+                    .background(Color(0xFFFFFEFA), RoundedCornerShape(8.dp))
+                    .border(1.dp, Color(0xFFB6B6B6), RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(rank, color = color, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(suit, color = color, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.weight(1f))
+                Text(suit, color = color, fontSize = 24.sp)
+            }
         }
     }
 }
