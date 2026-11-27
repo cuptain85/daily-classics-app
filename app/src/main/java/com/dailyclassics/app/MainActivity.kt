@@ -45,12 +45,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 var page by remember { mutableStateOf("Home") }
+                var selectedGame by remember { mutableStateOf("Sudoku") }
+                var selectedDate by remember { mutableStateOf(LocalDate.now()) }
                 var drawThree by remember { mutableStateOf(prefs.getBoolean("draw3", false)) }
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Pale) {
                     when (page) {
-                        "Home" -> Home(onGame = { page = it })
-                        "Sudoku" -> SudokuScreen(onBack = { page = "Home" }, prefs = prefs)
-                        "Crossword" -> CrosswordScreen(onBack = { page = "Home" }, prefs = prefs)
+                        "Home" -> Home(onGame = { selectedGame = it; page = "Calendar" })
+                        "Calendar" -> GameCalendarScreen(game = selectedGame, onBack = { page = "Home" }, onDateSelected = { selectedDate = it; page = selectedGame })
+                        "Sudoku" -> SudokuScreen(onBack = { page = "Home" }, prefs = prefs, initialDate = selectedDate)
+                        "Crossword" -> CrosswordScreen(onBack = { page = "Home" }, prefs = prefs, initialDate = selectedDate)
                         "Spades" -> SpadesScreen(onBack = { page = "Home" })
                         "Solitaire" -> SolitaireScreen(
                             onBack = { page = "Home" },
@@ -295,8 +298,8 @@ private fun GameHeader(title: String, onBack: () -> Unit, extra: String = "") {
 }
 
 @Composable
-private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences) {
-    var date by remember { mutableStateOf(LocalDate.now()) }
+private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences, initialDate: LocalDate) {
+    var date by remember { mutableStateOf(initialDate) }
     val daily = remember(date) { DailySudokuGenerator.forDate(date.toString()) }
     val puzzle = daily.puzzle
     val solution = daily.solution
@@ -445,8 +448,8 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
 }
 
 @Composable
-private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences) {
-    var date by remember { mutableStateOf(LocalDate.now()) }
+private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPreferences, initialDate: LocalDate) {
+    var date by remember { mutableStateOf(initialDate) }
     val puzzle = remember(date) { CrosswordPuzzleGenerator.forDate(date.toString()) }
     val entries = puzzle.entries
     val blocked = remember(puzzle) { puzzle.blankGrid.map { it == '#' } }
