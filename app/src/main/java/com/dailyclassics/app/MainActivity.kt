@@ -365,6 +365,9 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                         val i = r * 9 + c
                         val fixed = puzzle[i] != '0'
                         val chosen = selected == i
+                        val selectedValue = cells[selected]
+                        val sameNumber = selectedValue != '0' && cells[i] == selectedValue
+                        val sameRowOrColumn = r == selected / 9 || c == selected % 9
                         val conflict = cells[i] != '0' && cells.indices.any { other ->
                             other != i && cells[other] == cells[i] &&
                                 (other / 9 == i / 9 || other % 9 == i % 9 ||
@@ -372,7 +375,15 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                         }
                         Box(
                             Modifier.weight(1f).fillMaxHeight().padding(0.5.dp)
-                                .background(when { chosen -> Color(0xFFB8D9FF); conflict -> Color(0xFFFFDADA); else -> Color.White })
+                                .background(
+                                    when {
+                                        chosen -> Color(0xFFB8D9FF)
+                                        conflict -> Color(0xFFFFDADA)
+                                        sameNumber -> Color(0xFFFFE8A3)
+                                        sameRowOrColumn -> Color(0xFFEAF3FF)
+                                        else -> Color.White
+                                    }
+                                )
                                 .clickable { selected = i },
                             contentAlignment = Alignment.Center
                         ) {
