@@ -883,7 +883,7 @@ private fun SpadesScreen(onBack: () -> Unit) {
         (when (card.rank) { 14 -> "A"; 13 -> "K"; 12 -> "Q"; 11 -> "J"; else -> card.rank.toString() }) +
             listOf("♣", "♦", "♥", "♠")[card.suit]
 
-    Column(Modifier.fillMaxSize().background(Color(0xFFE9F2FC)).padding(12.dp)) {
+    Column(Modifier.fillMaxSize().background(Color(0xFF101B18)).padding(10.dp)) {
         GameHeader("Partnership Spades", onBack, "Hand $handNumber  •  You + Dewey vs. Huey + Louie")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             ScoreBox("SCORE", blueScore, blueBags, redScore, redBags)
@@ -899,10 +899,20 @@ private fun SpadesScreen(onBack: () -> Unit) {
             Text("Red tricks: ${tricks[1] + tricks[3]}", color = Color(0xFFB52E38), fontWeight = FontWeight.Bold)
         }
         if (phase == "bid") {
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.padding(14.dp)) {
-                    Text("YOUR BID", color = DeepBlue, fontWeight = FontWeight.Bold)
-                    Text("Choose how many tricks you expect your partnership to take.", color = Color.Gray, fontSize = 11.sp)
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF20342C)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD6B36A)), shape = RoundedCornerShape(12.dp)) {
+                Column(Modifier.padding(10.dp)) {
+                    Text("YOUR DEALT HAND  •  13 CARDS", color = Color(0xFFD6B36A), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        hands[0].forEach { card ->
+                            Column(Modifier.width(34.dp).height(53.dp).border(1.dp, Color(0xFFB7B7B7), RoundedCornerShape(4.dp)).background(Color(0xFFFFFEFA), RoundedCornerShape(4.dp)).padding(2.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
+                                Text(cardLabel(card), color = if (card.suit == 1 || card.suit == 2) Color(0xFFC52232) else Color(0xFF17211E), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(listOf("♣", "♦", "♥", "♠")[card.suit], color = if (card.suit == 1 || card.suit == 2) Color(0xFFC52232) else Color(0xFF17211E), fontSize = 15.sp)
+                            }
+                        }
+                    }
+                    Text("YOUR BID", color = Color(0xFFD6B36A), fontWeight = FontWeight.Bold)
+                    Text("Study your cards. Choose the tricks you expect your team to take.", color = Color(0xFFE0E5E1), fontSize = 11.sp)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         (0..13).forEach { bid ->
                             Text(if (bid == 0) "Nil" else bid.toString(), Modifier.background(if (selectedBid == bid) Blue else Pale, RoundedCornerShape(8.dp)).clickable { selectedBid = bid }.padding(horizontal = 11.dp, vertical = 10.dp), color = if (selectedBid == bid) Color.White else Ink, fontWeight = FontWeight.Bold)
