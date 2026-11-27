@@ -919,7 +919,7 @@ private fun SolitaireScreen(
     var selectedFoundation by remember { mutableIntStateOf(-1) }
     var message by remember { mutableStateOf("Tap the stock to deal. Select a card, then its destination.") }
     val dropBounds = remember { mutableStateMapOf<String, Rect>() }
-    var dragOrigin by remember { mutableStateOf(Offset.Zero) }
+    val dragOrigins = remember { mutableStateMapOf<String, Offset>() }
     var dragPoint by remember { mutableStateOf(Offset.Zero) }
     var dragSource by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var dragWaste by remember { mutableStateOf(false) }
@@ -960,14 +960,15 @@ private fun SolitaireScreen(
         dragWaste = false
     }
 
-    fun cardDragModifier(source: Pair<Int, Int>? = null, waste: Boolean = false): Modifier =
-        Modifier.onGloballyPositioned { dragOrigin = it.positionInRoot() }
+    fun cardDragModifier(source: Pair<Int, Int>? = null, waste: Boolean = false): Modifier {
+        val dragKey = if (waste) "waste" else "card:${source?.first}:${source?.second}"
+        return Modifier.onGloballyPositioned { dragOrigins[dragKey] = it.positionInRoot() }
             .pointerInput(source, waste, game) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         dragSource = source
                         dragWaste = waste
-                        dragPoint = dragOrigin + offset
+                        dragPoint = (dragOrigins[dragKey] ?: Offset.Zero) + offset
                     },
                     onDrag = { change, amount ->
                         change.consume()
@@ -977,6 +978,7 @@ private fun SolitaireScreen(
                     onDragCancel = { dragSource = null; dragWaste = false }
                 )
             }
+    }
 
     Column(Modifier.fillMaxSize().background(Felt).padding(10.dp)) {
         GameHeader("Klondike Solitaire", onBack, "Score: ${game.score}   Moves: ${game.moves}")
