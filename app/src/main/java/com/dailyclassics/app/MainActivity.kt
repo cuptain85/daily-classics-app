@@ -761,7 +761,7 @@ private fun SolitaireScreen(
                                     message = "Selected run beginning with ${card.label}."
                                 }
                             }
-                        }) { RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth(), faceDown = !card.faceUp, selected = selectedTableau == (column to index)) }
+                        }) { RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth().height(if (card.faceUp) 54.dp else 18.dp), faceDown = !card.faceUp, selected = selectedTableau == (column to index)) }
                     }
                 }
             }
