@@ -417,11 +417,6 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp)) {
         GameHeader("Daily Sudoku", onBack, "Puzzle for ${daily.dateKey}")
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            OutlinedButton(onClick = { date = date.minusDays(1) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) { Text("‹ Previous") }
-            Text(if (date == LocalDate.now()) "Today" else date.toString(), color = DeepBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            OutlinedButton(onClick = { date = date.plusDays(1) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) { Text("Next ›") }
-        }
         Spacer(Modifier.height(10.dp))
         Column(
             Modifier.fillMaxWidth().aspectRatio(1f).background(DeepBlue).padding(2.dp)
