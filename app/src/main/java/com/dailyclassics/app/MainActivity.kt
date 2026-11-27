@@ -922,6 +922,7 @@ private fun SolitaireScreen(
     var dragPoint by remember { mutableStateOf(Offset.Zero) }
     var dragSource by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var dragWaste by remember { mutableStateOf(false) }
+    var dragFoundation by remember { mutableIntStateOf(-1) }
 
     fun commit(next: KlondikeState?) {
         if (next == null) {
@@ -943,30 +944,38 @@ private fun SolitaireScreen(
         val column = (0..6).firstOrNull { dropBounds["column:$it"]?.contains(point) == true }
         when {
             foundation != null -> {
-                if (dragWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
-                else dragSource?.let { (source, index) ->
-                    if (index == game.tableau[source].lastIndex) commit(KlondikeEngine.moveTableauToFoundation(game, source))
-                    else message = "Only the top tableau card can move to a foundation."
+                when {
+                    dragWaste -> commit(KlondikeEngine.moveWasteToFoundation(game))
+                    dragFoundation >= 0 -> message = "That card is already in a foundation."
+                    else -> dragSource?.let { (source, index) ->
+                        if (index == game.tableau[source].lastIndex) commit(KlondikeEngine.moveTableauToFoundation(game, source))
+                        else message = "Only the top tableau card can move to a foundation."
+                    }
                 }
             }
             column != null -> {
-                if (dragWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
-                else dragSource?.let { (source, index) -> commit(KlondikeEngine.moveTableauRun(game, source, index, column)) }
+                when {
+                    dragWaste -> commit(KlondikeEngine.moveWasteToTableau(game, column))
+                    dragFoundation >= 0 -> commit(KlondikeEngine.moveFoundationToTableau(game, dragFoundation, column))
+                    else -> dragSource?.let { (source, index) -> commit(KlondikeEngine.moveTableauRun(game, source, index, column)) }
+                }
             }
             else -> message = "Drop the card on a tableau column or foundation."
         }
         dragSource = null
         dragWaste = false
+        dragFoundation = -1
     }
 
-    fun cardDragModifier(source: Pair<Int, Int>? = null, waste: Boolean = false): Modifier {
-        val dragKey = if (waste) "waste" else "card:${source?.first}:${source?.second}"
+    fun cardDragModifier(source: Pair<Int, Int>? = null, waste: Boolean = false, foundationSuit: Int = -1): Modifier {
+        val dragKey = when { waste -> "waste"; foundationSuit >= 0 -> "foundation-card:$foundationSuit"; else -> "card:${source?.first}:${source?.second}" }
         return Modifier.onGloballyPositioned { dragOrigins[dragKey] = it.positionInRoot() }
             .pointerInput(source, waste, game) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         dragSource = source
                         dragWaste = waste
+                        dragFoundation = foundationSuit
                         dragPoint = (dragOrigins[dragKey] ?: Offset.Zero) + offset
                     },
                     onDrag = { change, amount ->
@@ -974,7 +983,7 @@ private fun SolitaireScreen(
                         dragPoint += amount
                     },
                     onDragEnd = { finishDrag() },
-                    onDragCancel = { dragSource = null; dragWaste = false }
+                    onDragCancel = { dragSource = null; dragWaste = false; dragFoundation = -1 }
                 )
             }
     }
@@ -1021,7 +1030,7 @@ private fun SolitaireScreen(
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("WASTE", color = Color.White, fontSize = 9.sp)
-                Box(Modifier.width(48.dp).then(cardDragModifier(waste = true)).clickable {
+                Box(Modifier.width(48.dp).then(cardDragModifier(waste = true)) {
                     if (game.waste.isNotEmpty()) {
                         selectedWaste = true; selectedTableau = null; selectedFoundation = -1
                         message = "Waste card selected. Tap a tableau column or foundation."
@@ -1032,7 +1041,7 @@ private fun SolitaireScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("FOUND.", color = Color.White, fontSize = 8.sp)
                     val top = pile.lastOrNull()
-                    Box(Modifier.width(43.dp).onGloballyPositioned { dropBounds["foundation:$suit"] = it.boundsInRoot() }.clickable {
+                    Box(Modifier.width(43.dp).then(if (top != null) cardDragModifier(foundationSuit = suit) else Modifier).onGloballyPositioned { dropBounds["foundation:$suit"] = it.boundsInRoot() } {
                         if (selectedWaste) commit(KlondikeEngine.moveWasteToFoundation(game))
                         else if (selectedTableau != null && selectedTableau!!.second == game.tableau[selectedTableau!!.first].lastIndex) {
                             commit(KlondikeEngine.moveTableauToFoundation(game, selectedTableau!!.first))
@@ -1047,7 +1056,7 @@ private fun SolitaireScreen(
         Text(message, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(vertical = 9.dp))
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             game.tableau.forEachIndexed { column, pile ->
-                Column(Modifier.weight(1f).fillMaxHeight().onGloballyPositioned { dropBounds["column:$column"] = it.boundsInRoot() }.background(Color(0xFF1B7652), RoundedCornerShape(5.dp)).clickable {
+                Column(Modifier.weight(1f).fillMaxHeight().onGloballyPositioned { dropBounds["column:$column"] = it.boundsInRoot() }.background(Color(0xFF1B7652), RoundedCornerShape(5.dp))
                     if (selectedFoundation >= 0) {
                         commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
                     } else if (selectedWaste) {
@@ -1068,20 +1077,9 @@ private fun SolitaireScreen(
                 }.padding(2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     if (pile.isEmpty()) Text("K", Modifier.fillMaxWidth().background(Color(0xFF0E4B37), RoundedCornerShape(4.dp)).padding(vertical = 10.dp), color = Color.White, textAlign = TextAlign.Center, fontSize = 10.sp)
                     pile.forEachIndexed { index, card ->
-                        Box(Modifier.fillMaxWidth().then(if (card.faceUp) cardDragModifier(column to index) else Modifier).clickable {
-                            if (card.faceUp) {
-                                if (selectedFoundation >= 0) commit(KlondikeEngine.moveFoundationToTableau(game, selectedFoundation, column))
-                                else if (selectedWaste) commit(KlondikeEngine.moveWasteToTableau(game, column))
-                                else if (selectedTableau != null && selectedTableau!!.first != column) {
-                                    val source = selectedTableau!!
-                                    commit(KlondikeEngine.moveTableauRun(game, source.first, source.second, column))
-                                } else {
-                                    selectedTableau = column to index
-                                    selectedWaste = false
-                                    message = "Selected run beginning with ${card.label}."
-                                }
-                            }
-                        }) { RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth().height(if (card.faceUp) 54.dp else 18.dp), faceDown = !card.faceUp, selected = selectedTableau == (column to index)) }
+                        Box(Modifier.fillMaxWidth().then(if (card.faceUp) cardDragModifier(column to index) else Modifier)) {
+                            RealPlayingCard(card.takeIf { it.faceUp }, Modifier.fillMaxWidth().height(if (card.faceUp) 54.dp else 18.dp), faceDown = !card.faceUp)
+                        }
                     }
                 }
             }
