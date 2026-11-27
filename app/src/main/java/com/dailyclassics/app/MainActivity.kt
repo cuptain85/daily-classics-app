@@ -524,7 +524,7 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
             TextButton(onClick = { date = date.minusDays(1) }) { Text("‹ Previous", color = Color.Black) }
             TextButton(onClick = { date = date.plusDays(1) }) { Text("Next ›", color = Color.Black) }
         }
-        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1f).background(Color.Black).padding(1.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(Color.Black).padding(1.dp)) {
             Column(Modifier.fillMaxSize()) {
                 for (row in 0 until 13) {
                     Row(Modifier.weight(1f)) {
