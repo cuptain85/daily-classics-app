@@ -19,6 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,60 +68,139 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun Home(onGame: (String) -> Unit) {
-    val games = listOf(
-        Triple("Sudoku", "🔢", Blue),
-        Triple("Crossword", "✏️", Green),
-        Triple("Spades", "♠️", Blue),
-        Triple("Solitaire", "🃏", Green)
+    val sky = Color(0xFF35BDF5)
+    val meadow = Color(0xFF73D54B)
+    val tileData = listOf(
+        Triple("Sudoku", listOf(Color(0xFF28B8FF), Color(0xFF0755D8)), Color(0xFF073D9D)),
+        Triple("Crossword", listOf(Color(0xFF9BEA26), Color(0xFF198D32)), Color(0xFF17601F)),
+        Triple("Spades", listOf(Color(0xFFD94BFF), Color(0xFF7620C7)), Color(0xFF401078)),
+        Triple("Solitaire", listOf(Color(0xFFB7F33C), Color(0xFF239B37)), Color(0xFF176321))
     )
-    Column(Modifier.fillMaxSize().padding(18.dp)) {
-        Column {
+    Column(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF19AEEF), Color(0xFFB8EEFF), Color(0xFFB6ED75), Color(0xFF55B83B)))
+        ).padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().weight(0.28f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
-                "DAILY CLASSICS",
-                color = DeepBlue,
-                fontSize = 27.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.5.sp
+                "Daily",
+                color = Color.White,
+                fontSize = 43.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF062B68), androidx.compose.ui.geometry.Offset(3f, 5f), 8f)
+                )
             )
             Text(
-                "A little play every day.",
-                color = Ink,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                "Classics",
+                color = Color(0xFFFFD52E),
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1.5).sp,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF092B67), androidx.compose.ui.geometry.Offset(3f, 6f), 9f)
+                )
+            )
+            Text(
+                "Play • Puzzle • Relax",
+                color = Color.White,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(Color(0xFF123D83), androidx.compose.ui.geometry.Offset(1f, 3f), 5f)
+                )
             )
         }
-        Spacer(Modifier.height(22.dp))
-        Text("CHOOSE A GAME", color = DeepBlue, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-        Spacer(Modifier.height(12.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            games.chunked(2).forEach { pair ->
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    pair.forEach { game ->
+        Column(Modifier.fillMaxWidth().weight(0.58f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            tileData.chunked(2).forEachIndexed { rowIndex, row ->
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEachIndexed { columnIndex, item ->
+                        val gameName = item.first
+                        val colors = item.second
                         Card(
-                            onClick = { onGame(game.first) },
+                            onClick = { onGame(gameName) },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(22.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                            shape = RoundedCornerShape(26.dp),
+                            colors = CardDefaults.cardColors(containerColor = colors.first),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                         ) {
-                            Column(
-                                Modifier.fillMaxSize().padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                            Box(
+                                Modifier.fillMaxSize().background(Brush.linearGradient(colors)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(
-                                    Modifier.size(68.dp).background(game.third, RoundedCornerShape(20.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(game.second, fontSize = 38.sp)
+                                when (gameName) {
+                                    "Sudoku" -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Column(Modifier.padding(bottom = 4.dp).background(Color.White, RoundedCornerShape(10.dp)).padding(5.dp)) {
+                                            listOf("5  3  8", "6  1  4", "2  7  9").forEach { line ->
+                                                Text(line, color = Color(0xFF174B9B), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                                            }
+                                        }
+                                    }
+                                    "Crossword" -> Column(Modifier.padding(bottom = 4.dp).background(Color.White, RoundedCornerShape(8.dp)).padding(4.dp)) {
+                                        listOf("■ □ ■ □", "□ ■ □ ■", "■ □ □ ■", "□ ■ □ □").forEach { line ->
+                                            Text(line, color = Color(0xFF183A35), fontSize = 23.sp, fontWeight = FontWeight.Black, lineHeight = 24.sp)
+                                        }
+                                    }
+                                    "Spades" -> FanCards(listOf("J♠", "Q♠", "K♠", "A♠"), red = false)
+                                    "Solitaire" -> FanCards(listOf("A♥", "2♥", "3♥", "4♥", "5♥"), red = true)
                                 }
-                                Spacer(Modifier.height(12.dp))
-                                Text(game.first, color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    gameName,
+                                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                                        .background(Color(0xCC082B20), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                                        .padding(vertical = 8.dp),
+                                    color = Color.White,
+                                    fontSize = 23.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
                     }
                 }
             }
+        }
+        Row(
+            Modifier.fillMaxWidth().weight(0.14f).padding(top = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                Modifier.weight(1f).fillMaxHeight().background(Color(0xFF159AD0), RoundedCornerShape(50)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🦆", fontSize = 58.sp)
+            }
+            Column(Modifier.weight(1.5f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🌼  🌸  🌼", fontSize = 20.sp)
+                Text("A New Challenge Every Day!", color = Color(0xFF174D24), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            }
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                Text("🐰", fontSize = 58.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FanCards(labels: List<String>, red: Boolean) {
+    Box(Modifier.fillMaxWidth().height(112.dp), contentAlignment = Alignment.Center) {
+        labels.forEachIndexed { index, label ->
+            Text(
+                label,
+                Modifier.offset(x = ((index - (labels.size - 1) / 2f) * 28).dp, y = (if (index % 2 == 0) 5 else (-5)).dp)
+                    .zIndex(index.toFloat())
+                    .background(Color.White, RoundedCornerShape(9.dp))
+                    .padding(horizontal = 8.dp, vertical = 17.dp),
+                color = if (red) Color(0xFFD51F32) else Color(0xFF101820),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black
+            )
         }
     }
 }
