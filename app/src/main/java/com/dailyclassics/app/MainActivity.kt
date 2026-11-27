@@ -516,7 +516,7 @@ private fun CrosswordScreen(onBack: () -> Unit, prefs: android.content.SharedPre
                 Text("CROSSWORD", color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Text(date.toString(), color = Color.DarkGray, fontSize = 11.sp)
             }
-            Text("$" + "completed/${entries.size}", color = Color.Black, fontSize = 12.sp)
+            Text("${completed}/${entries.size}", color = Color.Black, fontSize = 12.sp)
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = { date = date.minusDays(1) }) { Text("‹ Previous", color = Color.Black) }
