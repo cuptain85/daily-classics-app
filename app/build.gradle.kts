@@ -4,6 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val testKeystorePath = System.getenv("DAILY_CLASSICS_KEYSTORE_PATH")
+
 android {
     namespace = "com.dailyclassics.app"
     compileSdk = 36
@@ -12,8 +14,27 @@ android {
         applicationId = "com.dailyclassics.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
+    }
+
+    signingConfigs {
+        create("stableTest") {
+            if (!testKeystorePath.isNullOrBlank()) {
+                storeFile = file(testKeystorePath)
+                storePassword = System.getenv("DAILY_CLASSICS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("DAILY_CLASSICS_KEY_ALIAS") ?: "dailyclassics"
+                keyPassword = System.getenv("DAILY_CLASSICS_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (!testKeystorePath.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("stableTest")
+            }
+        }
     }
 
     buildFeatures { compose = true }
