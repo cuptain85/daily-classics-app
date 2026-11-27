@@ -337,7 +337,7 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
         persist()
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp)) {
         GameHeader("Daily Sudoku", onBack, "Puzzle for ${daily.dateKey}")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             OutlinedButton(onClick = { date = date.minusDays(1) }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) { Text("‹ Previous") }
@@ -422,7 +422,7 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
             }, modifier = Modifier.weight(1f)) { Text("Redo") }
         }
         for (row in 0..2) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (col in 1..3) {
                     val n = row * 3 + col
                     Button(onClick = {
@@ -439,7 +439,7 @@ private fun SudokuScreen(onBack: () -> Unit, prefs: android.content.SharedPrefer
                             }
                             persist()
                         }
-                    }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) { Text(n.toString(), fontSize = 19.sp) }
+                    }, modifier = Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(0.dp)) { Text(n.toString(), fontSize = 19.sp) }
                 }
             }
         }
